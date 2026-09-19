@@ -98,14 +98,12 @@ await safe("exhibitions", async () => {
   }
 });
 await safe("concerts", async () => {
-  const w1 = [ymd8(0), ymd8(30)];
-  const w2 = [ymd8(31), ymd8(60)];
-  const raw = [...(await collectConcerts(KOPIS, w1[0], w1[1])), ...(await collectConcerts(KOPIS, w2[0], w2[1]))];
+  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(30));
   console.log("concerts raw:", raw.length);
   const groups = Object.fromEntries(CLUSTERS.map((c) => [c, []]));
   let skip = 0;
   for (const r of raw) {
-    if (!(num8(r.from) <= num8(ymd8(60)) && num8(r.to) >= today)) {
+    if (!(num8(r.from) <= num8(ymd8(30)) && num8(r.to) >= today)) {
       skip++;
       continue;
     }
