@@ -88,3 +88,69 @@ export async function collectSema() {
     return [];
   }
 }
+
+// Leeum/Hoam: search page IDs then detail title/period
+async function leeumHoamCollect(host, museum) {
+  const out = [];
+  let ids = [];
+  try {
+    const h = await getText("https://www.leeumhoam.org/" + host + "/search?keyword=", 2);
+    const rx = new RegExp("/" + host + "/exhibition/(\d+)", "g");
+    ids = [...new Set([...h.matchAll(rx)].map((m) => m[1]))].slice(0, 14);
+  } catch (e) {
+    return out;
+  }
+  for (const id of ids) {
+    try {
+      const d = await getText("https://www.leeumhoam.org/" + host + "/exhibition/" + id + "?params=Y", 1);
+      const bv = d.slice(d.indexOf("boardView") >= 0 ? d.indexOf("boardView") : 0);
+const og = (d.match(/<meta[^>]+property="og:title"[^>]*content="([^"]+)"/i) || [])[1];
+      const h4 = (d.match(/<h4[^>]*>([\s\S]+?)<\/h4>/i) || [])[1];
+      const title = strip(h4 || og || h1 || "").slice(0, 70);
+      const t = d.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      const dm = t.match(/(\d{4})\.(\d{2})\.(\d{2})\.?\s*\D\s*(\d{4})\.(\d{2})\.(\d{2})\.?/);
+      if (!title) continue;
+      out.push({
+        title: title, venue: museum,
+        start: dm ? dm[1] + "." + dm[2] + "." + dm[3] : "",
+        end: dm ? dm[4] + "." + dm[5] + "." + dm[6] : "",
+        url: "https://www.leeumhoam.org/" + host + "/exhibition/" + id + "?params=Y",
+      });
+    } catch (e) {}
+  }
+  return out;
+}
+export async function collectLeeum() {
+  return leeumHoamCollect("leeum", "서울 용산");
+}
+export async function collectHoam() {
+  return leeumHoamCollect("hoam", "경기 용인");
+}
+// Arko museum: board list cids then detail title/period
+export async function collectArko() {
+  const out = [];
+  try {
+    const h = await getText("https://www.arko.or.kr/artcenter/board/list/506?bid=266", 2);
+    const cids = [...new Set([...h.matchAll(/board\/view\/506\?bid=266[^"'\s<>]*cid=(\d+)/g)].map((m) => m[1]))].slice(0, 8);
+    for (const cid of cids) {
+      try {
+        const d = await getText("https://www.arko.or.kr/artcenter/board/view/506?bid=266&cid=" + cid, 1);
+        const bv = d.slice(d.indexOf("boardView") >= 0 ? d.indexOf("boardView") : 0);
+const og = (d.match(/<meta[^>]+property="og:title"[^>]*content="([^"]+)"/i) || [])[1];
+        const ti = (d.match(/<title>([^<]+)<\/title>/i) || [])[1];
+        const im = (bv.match(/<img[^>]+alt="([^"]{6,120})"/i) || [])[1];
+const title = strip((im || og || ti || "")).split("|")[0].trim().slice(0, 70);
+        const t = d.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+        const dm = t.match(/(\d{4})\.(\d{2})\.(\d{2})\s*\D\s*(\d{4})\.(\d{2})\.(\d{2})/);
+        if (!title) continue;
+        out.push({
+          title: title, venue: "서울 종로",
+          start: dm ? dm[1] + "." + dm[2] + "." + dm[3] : "",
+          end: dm ? dm[4] + "." + dm[5] + "." + dm[6] : "",
+          url: "https://www.arko.or.kr/artcenter/board/view/506?bid=266&cid=" + cid,
+        });
+      } catch (e) {}
+    }
+  } catch (e) {}
+  return out;
+}
