@@ -3,6 +3,7 @@
 import { sendMessage, pace, esc, link, chunkLines } from "./src/tg.mjs";
 import { kstLabel, ymd8, num8 } from "./src/dates.mjs";
 import { collectTickets } from "./src/tickets.mjs";
+import { ruleAlerts, knpsNotices } from "./src/stays.mjs";
 import { collectFestivals, REGION_ORDER, REGION_LABEL, shortArea, periodOf, festUrl } from "./src/festivals.mjs";
 import { collectConcerts, clusterOf, cityOf, kopisUrl, CLUSTERS } from "./src/concerts.mjs";
 import { collectArtcue, collectMmca, collectSema, collectLeeum, collectHoam, collectArko } from "./src/exhibitions.mjs";
@@ -45,14 +46,28 @@ console.log("date:", dateLabel, "today:", today);
 await safe("tickets", async () => {
   const tk = await collectTickets(today, num8(ymd8(7)));
   console.log("tickets:", tk.length);
-  const lines = tk.map((t) => {
+  const tmr = num8(ymd8(1));
+  const tline = (t) => {
     const hhmm = t.open.slice(11, 16);
     const md = t.open.slice(5, 10).replace("-", "/");
     return "• " + esc(t.title) + " (" + esc(t.region) + ") | 예매 " + md + " " + hhmm + " " + link(t.url);
+  };
+  const now = tk.filter((t) => {
+    const d = num8(t.open.slice(0, 10));
+    return d === today || d === tmr;
   });
-  const parts = chunkLines(lines);
-  for (let i = 0; i < parts.length; i++) {
-    await say("[공연·전시 티켓 예매 오픈 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
+  const week = tk.filter((t) => {
+    const d = num8(t.open.slice(0, 10));
+    return d !== today && d !== tmr;
+  });
+  if (now.length) {
+    await say("[공연·전시 티켓 오늘·내일 예매 오픈 | " + dateLabel + "]\n" + now.map(tline).join("\n"));
+  }
+  if (week.length) {
+    const parts = chunkLines(week.map(tline));
+    for (let i = 0; i < parts.length; i++) {
+      await say("[공연·전시 티켓 1주일내 예매 오픈 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
+    }
   }
 });
 await safe("festivals", async () => {
@@ -159,6 +174,24 @@ await safe("concerts", async () => {
         : "[콘서트·음악 | " + dateLabel + " | " + k + " " + list.length + "건]";
       await say(head + "\n" + parts[i].join("\n"));
     }
+  }
+});
+await safe("stays", async () => {
+  const alerts = ruleAlerts(today);
+  console.log("stays alerts:", alerts.length);
+  if (alerts.length) {
+    await say("[공공예약 오픈 임박 | " + dateLabel + "]\n" + alerts.map((a) =>
+      itemLine(esc(a.name) + " (전국) | " + esc(a.period), a.url, a.openNum === today)
+    ).join("\n"));
+  }
+  const kn = await knpsNotices(today);
+  console.log("knps notices:", kn.length);
+  const KG = ["서울", "인천", "경기", "강원", "대전", "세종", "충북", "충남", "광주", "전북", "전남", "대구", "경북", "부산", "울산", "경남", "제주", "기타"];
+  for (const key of KG) {
+    const list = kn.filter((x) => x.region === key);
+    if (!list.length) continue;
+    await say("[국립공원 공지 7일 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건]\n" +
+      list.map((x) => "• " + esc(x.title) + " (" + esc(x.region) + ") | " + esc(x.date) + " " + link(x.url)).join("\n"));
   }
 });
 await safe("movies", async () => {
