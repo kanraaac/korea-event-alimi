@@ -1,7 +1,16 @@
 // Telegram Bot API helpers. Text only, HTML parse mode, paced sends.
 const api = (tok) => `https://api.telegram.org/bot${tok}`;
-export const esc = (s) =>
-  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const esc = (s) => {
+  let t = String(s ?? "");
+  for (let i = 0; i < 3; i++) {
+    const u = t.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    const v = u.replace(/&quot;/g, String.fromCharCode(34)).replace(/&#39;/g, String.fromCharCode(39)).replace(/&apos;/g, String.fromCharCode(39)).replace(/&amp;/g, "&");
+    if (v === t) break;
+    t = v;
+  }
+  t = t.replace(/<([^<>]+)>/g, "〈$1〉");
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+};
 export const link = (u) => `<a href="${u}">[ 보기 ]</a>`;
 export const pace = () => new Promise((r) => setTimeout(r, 1100));
 export function brackets(s) {
