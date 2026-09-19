@@ -1,0 +1,8 @@
+services:
+  digest:
+    build: .
+    image: korea-event-alimi:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Seoul
