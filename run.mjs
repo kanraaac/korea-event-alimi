@@ -91,7 +91,7 @@ await safe("festivals", async () => {
   }
 });
 await safe("exhibitions", async () => {
-  const endWin = num8(ymd8(30));
+  const endWin = num8(ymd8(15));
   const art = await collectArtcue();
   const seenT = new Set(art.map((x) => x.title));
   const extra = [...(await collectMmca()), ...(await collectSema()), ...(await collectLeeum()), ...(await collectHoam()), ...(await collectArko())].filter((x) => x.title && !seenT.has(x.title));
@@ -138,12 +138,12 @@ await safe("exhibitions", async () => {
   }
  });
 await safe("concerts", async () => {
-  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(30));
+  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(15));
   console.log("concerts raw:", raw.length);
   const groups = Object.fromEntries(CLUSTERS.map((c) => [c, []]));
   let skip = 0;
   for (const r of raw) {
-    if (!(num8(r.from) <= num8(ymd8(30)) && num8(r.to) >= today)) {
+    if (!(num8(r.from) <= num8(ymd8(15)) && num8(r.to) >= today)) {
       skip++;
       continue;
     }
