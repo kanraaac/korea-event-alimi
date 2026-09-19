@@ -4,6 +4,9 @@ export const esc = (s) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 export const link = (u) => `<a href="${u}">[ 보기 ]</a>`;
 export const pace = () => new Promise((r) => setTimeout(r, 1100));
+export function brackets(s) {
+  return String(s ?? "").replace(/<([^<>]+)>/g, "〈$1〉");
+}
 export function chunkLines(lines, headLen = 90, max = 3500) {
   const parts = [];
   let buf = [],
