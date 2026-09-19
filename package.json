@@ -1,0 +1,8 @@
+{
+  "name": "korea-event-alimi",
+  "version": "1.0.0",
+  "description": "대한민국 공연·전시·축제·영화·도서 텔레그램 다이제스트 (VPS daily runner, zero dependencies)",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node run.mjs" }
+}
