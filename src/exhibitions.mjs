@@ -106,8 +106,9 @@ async function leeumHoamCollect(host, museum) {
       const bv = d.slice(d.indexOf("boardView") >= 0 ? d.indexOf("boardView") : 0);
 const og = (d.match(/<meta[^>]+property="og:title"[^>]*content="([^"]+)"/i) || [])[1];
       const h4 = (d.match(/<h4[^>]*>([\s\S]+?)<\/h4>/i) || [])[1];
+const h4s = [...d.matchAll(/<h4[^>]*>([\s\S]+?)<\/h4>/gi)].map((m) => strip(m[1])).filter((t) => t && t.length >= 2 && !/확인|닫기|팝업|레이어|메뉴|검색|예약|로그인|닫힘/.test(t));
 const h1 = (d.match(/<h1[^>]*>([\s\S]+?)<\/h1>/i) || [])[1];
-      const title = strip(h4 || og || h1 || "").slice(0, 70);
+      const title = (h4s[0] || strip(h1 || "")).slice(0, 70);
       const t = d.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
       const dm = t.match(/(\d{4})\.(\d{2})\.(\d{2})\.?\s*\D\s*(\d{4})\.(\d{2})\.(\d{2})\.?/);
       if (!title) continue;
