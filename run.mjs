@@ -87,8 +87,21 @@ await safe("festivals", async () => {
   const y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
   const res = await collectFestivals(y, m, d);
   console.log("festivals:", res.total);
-  for (const key of REGION_ORDER) {
-    const list = res.groups[key] || [];
+  const fgroups = {};
+  for (const key of ["서울", "대구", "경북", "경남", "울산", "부산"]) fgroups[key] = [];
+  for (const key of ["서울", "대구", "경북", "경남", "울산", "부산"]) {
+    for (const it of (res.groups[key] || [])) {
+      if (key === "경북" && /경주/.test(it.name + " " + it.area)) {
+        (fgroups["경주"] = fgroups["경주"] || []).push(it);
+      } else {
+        fgroups[key].push(it);
+      }
+    }
+  }
+  const FORDER = ["서울", "대구", "경북", "경주", "경남", "울산", "부산"];
+  const FLABEL = { "서울": "서울", "대구": "대구", "경북": "경상북도", "경주": "경주", "경남": "경상남도", "울산": "울산", "부산": "부산" };
+  for (const key of FORDER) {
+    const list = fgroups[key] || [];
     if (!list.length) continue;
     const lines = list.map((it) =>
       itemLine(esc(it.name) + " (" + esc(shortArea(it.area)) + ") | " + esc(periodOf(it)), festUrl(it.id), isToday(it.start, it.end))
@@ -96,8 +109,8 @@ await safe("festivals", async () => {
     const parts = chunkLines(lines);
     for (let i = 0; i < parts.length; i++) {
       const head = parts.length > 1
-        ? "[지역축제·지역행사 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건 | " + (i + 1) + "/" + parts.length + "]"
-        : "[지역축제·지역행사 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건]";
+        ? "[지역축제·지역행사 | " + dateLabel + " | " + FLABEL[key] + " " + list.length + "건 | " + (i + 1) + "/" + parts.length + "]"
+        : "[지역축제·지역행사 | " + dateLabel + " | " + FLABEL[key] + " " + list.length + "건]";
       await say(head + "\n" + parts[i].join("\n"));
     }
   }
@@ -233,11 +246,6 @@ await safe("books", async () => {
   const parts = chunkLines(best.map(bl));
   for (let i = 0; i < parts.length; i++) {
     await say("[도서 베스트셀러 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
-  }
-  const news = await collectNewBooks();
-  console.log("books new:", news.length);
-  if (news.length) {
-    await say("[도서 신간 | " + dateLabel + "]\n" + news.map(bl).join("\n"));
   }
 });
 console.log("sent messages:", sent.length);
