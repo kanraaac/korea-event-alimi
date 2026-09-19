@@ -106,24 +106,29 @@ await safe("exhibitions", async () => {
   const endWin = num8(ymd8(15));
   const art = await collectArtcue();
   const seenT = new Set(art.map((x) => x.title));
-  const extra = [...(await collectMmca()), ...(await collectSema()), ...(await collectLeeum()), ...(await collectHoam()), ...(await collectArko())].filter((x) => x.title && !seenT.has(x.title));
+  const extra = [...(await collectSema()), ...(await collectLeeum()), ...(await collectHoam()), ...(await collectArko())].filter((x) => x.title && !seenT.has(x.title));
   const all = [...art, ...extra];
   console.log("exhibitions raw:", all.length);
   const inWin = all.filter((x) => x.start && num8(x.start) <= endWin && (!x.end || num8(x.end) >= today));
   inWin.sort((a, b) => num8(a.end || "9999") - num8(b.end || "9999"));
   console.log("exhibitions inWin:", inWin.length);
-  const EG = ["수도권", "서부권", "동부권", "경주/대구", "울산/부산"];
+  const EG = ["서울", "대구", "경주", "울산", "부산"];
   function exGroup(x) {
     const r = x.region || "";
     const hay = (x.title || "") + " " + (x.venue || "");
-    if (r === "대구") return "경주/대구";
-    if (r === "울산" || r === "부산") return "울산/부산";
-    if (r === "경북" && /경주/.test(hay)) return "경주/대구";
-    if (r === "서울" || r === "인천" || r === "경기") return "수도권";
-    if (r === "강원" || r === "경북" || r === "경남") return "동부권";
-    if (r === "충북" || r === "충남" || r === "대전" || r === "세종" || r === "전북" || r === "전남" || r === "광주" || r === "제주") return "서부권";
-    if (/서울|경기|인천|종로|용산|과천|덕수궁|SeMA|MMCA/.test(hay)) return "수도권";
-    return "수도권";
+    if (r === "대구") return "대구";
+    if (r === "울산") return "울산";
+    if (r === "부산") return "부산";
+    if (r === "서울") return "서울";
+    if (r === "경북" && /경주/.test(hay)) return "경주";
+    if (/대구/.test(hay)) return "대구";
+    if (/울산/.test(hay)) return "울산";
+    if (/부산|해운대|벡스코/.test(hay)) return "부산";
+    if (/경주/.test(hay)) return "경주";
+    if (r === "경북" || r === "경기" || r === "인천" || r === "강원" || r === "충북" || r === "충남" || r === "대전" || r === "세종" || r === "전북" || r === "전남" || r === "광주" || r === "제주" || r === "경남") return "";
+    if (/용인|과천|청주|성남|고양|수원|부천|안양|하남|인천|경기|세종|대전|충북|충남|전북|전남|광주|강원|경남|제주|경북/.test(hay)) return "";
+    if (/서울|용산|종로|덕수궁|SeMA|리움|아르코/.test(hay)) return "서울";
+    return "";
   }
   const egroups = {};
   for (const x of inWin) {
@@ -149,27 +154,41 @@ await safe("exhibitions", async () => {
     }
   }
  });
+  function concertCity(area, hay) {
+    const a = area || "";
+    if (/대구/.test(a)) return "대구";
+    if (/울산/.test(a)) return "울산";
+    if (/부산/.test(a)) return "부산";
+    if (/서울/.test(a)) return "서울";
+    if (/경북/.test(a) && /경주/.test(hay)) return "경주";
+    if (/대구/.test(hay)) return "대구";
+    if (/울산/.test(hay)) return "울산";
+    if (/부산|해운대|벡스코/.test(hay)) return "부산";
+    if (/경주/.test(hay)) return "경주";
+    if (/서울|올림픽|예술의전당|세종문화|롯데콘서트|KSPO|고척|잠실|홍대|마포|서교|연남|합정|대학로|코엑스|금호아트홀|영산아트홀|무신사|개러지|롤링홀|명화|원더로크|상상마당|세티|SETI|클럽|라이브홀|라이브클럽|소극장|성수|건대|이태원/.test(hay)) return "서울";
+    return "";
+  }
 await safe("concerts", async () => {
   const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(15));
   console.log("concerts raw:", raw.length);
-  const groups = Object.fromEntries(CLUSTERS.map((c) => [c, []]));
+  const groups = Object.fromEntries(["서울", "대구", "경주", "울산", "부산"].map((c) => [c, []]));
   let skip = 0;
   for (const r of raw) {
     if (!(num8(r.from) <= num8(ymd8(15)) && num8(r.to) >= today)) {
       skip++;
       continue;
     }
-    const hay = r.name + " " + r.place + " " + r.area;
-    const c = clusterOf(hay);
+    const hay = r.name + " " + r.place;
+    const c = concertCity(r.area, hay);
     if (!c) {
       skip++;
       continue;
     }
-    r._city = cityOf(hay);
+    r._city = c;
     groups[c].push(r);
   }
   console.log("concerts skipped:", skip);
-  for (const k of CLUSTERS) {
+  for (const k of ["서울", "대구", "경주", "울산", "부산"]) {
     const list = groups[k].sort((a, b) => num8(a.from) - num8(b.from));
     if (!list.length) continue;
     const lines = list.map((r) => {
