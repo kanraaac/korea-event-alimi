@@ -95,7 +95,7 @@ async function leeumHoamCollect(host, museum) {
   let ids = [];
   try {
     const h = await getText("https://www.leeumhoam.org/" + host + "/search?keyword=", 2);
-    const rx = new RegExp("/" + host + "/exhibition/(\d+)", "g");
+    const rx = new RegExp("/" + host + "/exhibition/(\\d+)", "g");
     ids = [...new Set([...h.matchAll(rx)].map((m) => m[1]))].slice(0, 14);
   } catch (e) {
     return out;
