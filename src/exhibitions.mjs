@@ -106,6 +106,7 @@ async function leeumHoamCollect(host, museum) {
       const bv = d.slice(d.indexOf("boardView") >= 0 ? d.indexOf("boardView") : 0);
 const og = (d.match(/<meta[^>]+property="og:title"[^>]*content="([^"]+)"/i) || [])[1];
       const h4 = (d.match(/<h4[^>]*>([\s\S]+?)<\/h4>/i) || [])[1];
+const h1 = (d.match(/<h1[^>]*>([\s\S]+?)<\/h1>/i) || [])[1];
       const title = strip(h4 || og || h1 || "").slice(0, 70);
       const t = d.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
       const dm = t.match(/(\d{4})\.(\d{2})\.(\d{2})\.?\s*\D\s*(\d{4})\.(\d{2})\.(\d{2})\.?/);
