@@ -3,7 +3,7 @@
 import { sendMessage, pace, esc, link, chunkLines } from "./src/tg.mjs";
 import { kstLabel, ymd8, num8 } from "./src/dates.mjs";
 import { collectTickets } from "./src/tickets.mjs";
-import { ruleAlerts, knpsNotices } from "./src/stays.mjs";
+import { ruleAlerts } from "./src/stays.mjs";
 import { collectFestivals, REGION_ORDER, REGION_LABEL, shortArea, periodOf, festUrl } from "./src/festivals.mjs";
 import { collectConcerts, clusterOf, cityOf, kopisUrl, CLUSTERS } from "./src/concerts.mjs";
 import { collectArtcue, collectMmca, collectSema, collectLeeum, collectHoam, collectArko } from "./src/exhibitions.mjs";
@@ -36,7 +36,7 @@ async function safe(name, fn) {
 }
 // 오늘 진행중이면 빨간점+굵게 (축제·콘서트·전시만)
 function itemLine(inner, url, active) {
-  return active ? "• 🔴 <b>" + inner + "</b> " + link(url) : "• " + inner + " " + link(url);
+  return active ? "• 🟢 <b>" + inner + "</b> " + link(url) : "• " + inner + " " + link(url);
 }
 const isToday = (from, to) => num8(from) <= today && today <= num8(to);
 const knex = (s) => String(s || "").replace(/^\d{4}\./, "");
@@ -52,23 +52,35 @@ await safe("tickets", async () => {
     const md = t.open.slice(5, 10).replace("-", "/");
     return "• " + esc(t.title) + " (" + esc(t.region) + ") | 예매 " + md + " " + hhmm + " " + link(t.url);
   };
-  const now = tk.filter((t) => {
-    const d = num8(t.open.slice(0, 10));
-    return d === today || d === tmr;
-  });
-  const week = tk.filter((t) => {
-    const d = num8(t.open.slice(0, 10));
-    return d !== today && d !== tmr;
-  });
-  if (now.length) {
-    await say("[공연·전시 티켓 오늘·내일 예매 오픈 | " + dateLabel + "]\n" + now.map(tline).join("\n"));
-  }
-  if (week.length) {
-    const parts = chunkLines(week.map(tline));
+  const TKC = ["수도권", "충청전라", "강원", "영남", "대구", "울산", "부산", "제주", "기타"];
+  async function tkSend(head, items) {
+    if (!items.length) return;
+    const raw = [];
+    for (const k of TKC) {
+      const list = items.filter((t) => (clusterOf(t.title + " " + t.region) || "기타") === k);
+      if (!list.length) continue;
+      raw.push("■ " + k);
+      for (const t of list) raw.push(tline(t));
+    }
+    const parts = chunkLines(raw);
+    for (let i = parts.length - 1; i > 0; i--) {
+      if (parts[i][0].indexOf("■ ") !== 0) {
+        const prev = parts[i - 1];
+        if (prev.length && prev[prev.length - 1].indexOf("■ ") === 0) {
+          parts[i].unshift(prev.pop());
+        }
+      }
+    }
     for (let i = 0; i < parts.length; i++) {
-      await say("[공연·전시 티켓 1주일내 예매 오픈 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
+      await say(head + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
     }
   }
+  const isNow = (t) => {
+    const d = num8(t.open.slice(0, 10));
+    return d === today || d === tmr;
+  };
+  await tkSend("[공연·전시 티켓 오늘·내일 예매 오픈 | " + dateLabel + "]", tk.filter(isNow));
+  await tkSend("[공연·전시 티켓 1주일내 예매 오픈 | " + dateLabel + "]", tk.filter((t) => !isNow(t)));
 });
 await safe("festivals", async () => {
   const s = ymd8(0);
@@ -180,18 +192,9 @@ await safe("stays", async () => {
   const alerts = ruleAlerts(today);
   console.log("stays alerts:", alerts.length);
   if (alerts.length) {
-    await say("[공공예약 오픈 임박 | " + dateLabel + "]\n" + alerts.map((a) =>
+    await say("[공공예약 오픈 임박 | " + dateLabel + "]" + "\n" + alerts.map((a) =>
       itemLine(esc(a.name) + " (전국) | " + esc(a.period), a.url, a.openNum === today)
     ).join("\n"));
-  }
-  const kn = await knpsNotices(today);
-  console.log("knps notices:", kn.length);
-  const KG = ["서울", "인천", "경기", "강원", "대전", "세종", "충북", "충남", "광주", "전북", "전남", "대구", "경북", "부산", "울산", "경남", "제주", "기타"];
-  for (const key of KG) {
-    const list = kn.filter((x) => x.region === key);
-    if (!list.length) continue;
-    await say("[국립공원 공지 7일 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건]\n" +
-      list.map((x) => "• " + esc(x.title) + " (" + esc(x.region) + ") | " + esc(x.date) + " " + link(x.url)).join("\n"));
   }
 });
 await safe("movies", async () => {
