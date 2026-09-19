@@ -55,24 +55,32 @@ await safe("tickets", async () => {
   const TKC = ["수도권", "충청전라", "강원", "영남", "대구", "울산", "부산", "제주", "기타"];
   async function tkSend(head, items) {
     if (!items.length) return;
-    const raw = [];
+    const chunks = [];
+    let buf = [], n = head.length;
     for (const k of TKC) {
       const list = items.filter((t) => (clusterOf(t.title + " " + t.region) || "기타") === k);
       if (!list.length) continue;
-      raw.push("■ " + k);
-      for (const t of list) raw.push(tline(t));
-    }
-    const parts = chunkLines(raw);
-    for (let i = parts.length - 1; i > 0; i--) {
-      if (parts[i][0].indexOf("■ ") !== 0) {
-        const prev = parts[i - 1];
-        if (prev.length && prev[prev.length - 1].indexOf("■ ") === 0) {
-          parts[i].unshift(prev.pop());
+      const lines = list.map(tline);
+      let idx = 0, needHead = true;
+      while (idx < lines.length) {
+        const sub = "🔴 <b>" + k + "</b>";
+        if (needHead) {
+          if (buf.length && n + sub.length + 1 + lines[idx].length + 1 > 3500) {
+            chunks.push(buf); buf = []; n = head.length;
+          }
+          buf.push(sub); n += sub.length + 1; needHead = false;
+        }
+        while (idx < lines.length && n + lines[idx].length + 1 <= 3500) {
+          buf.push(lines[idx]); n += lines[idx].length + 1; idx++;
+        }
+        if (idx < lines.length) {
+          chunks.push(buf); buf = []; n = head.length; needHead = true;
         }
       }
     }
-    for (let i = 0; i < parts.length; i++) {
-      await say(head + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
+    if (buf.length) chunks.push(buf);
+    for (let i = 0; i < chunks.length; i++) {
+      await say(head + (chunks.length > 1 ? " | " + (i + 1) : "") + "\n" + chunks[i].join("\n"));
     }
   }
   const isNow = (t) => {
