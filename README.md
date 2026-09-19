@@ -25,3 +25,9 @@ Aside 루틴 id: `zSKlg6WaBidBtWVY`
 ## 시크릿
 
 봇 토큰·API 키는 저장소에 넣지 않는다. Aside Vault / 루틴 `tg.secret` 만 사용.
+
+## VPS 이전
+
+매일 08:00 발송을 Hostinger VPS로 옮기는 방법이 `docs/VPS.md` 에 있다.
+`package.json`, `Dockerfile`, `docker-compose.yml`, `deploy-vps.sh`, `run.mjs`, `src/` 가 그 프로젝트다.
+VPS에서 돌아가면 Aside 루틴은 pause 한다(중복 방지).
