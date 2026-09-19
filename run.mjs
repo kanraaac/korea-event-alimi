@@ -5,7 +5,7 @@ import { kstLabel, ymd8, num8 } from "./src/dates.mjs";
 import { collectTickets } from "./src/tickets.mjs";
 import { collectFestivals, REGION_ORDER, REGION_LABEL, shortArea, periodOf, festUrl } from "./src/festivals.mjs";
 import { collectConcerts, clusterOf, cityOf, kopisUrl, CLUSTERS } from "./src/concerts.mjs";
-import { collectArtcue, collectMmca, collectSema } from "./src/exhibitions.mjs";
+import { collectArtcue, collectMmca, collectSema, collectLeeum, collectHoam, collectArko } from "./src/exhibitions.mjs";
 import { collectMovies, naverMovie } from "./src/movies.mjs";
 import { collectBooks, collectNewBooks } from "./src/books.mjs";
 
@@ -79,7 +79,7 @@ await safe("exhibitions", async () => {
   const endWin = num8(ymd8(60));
   const art = await collectArtcue();
   const seenT = new Set(art.map((x) => x.title));
-  const extra = [...(await collectMmca()), ...(await collectSema())].filter((x) => x.title && !seenT.has(x.title));
+  const extra = [...(await collectMmca()), ...(await collectSema()), ...(await collectLeeum()), ...(await collectHoam()), ...(await collectArko())].filter((x) => x.title && !seenT.has(x.title));
   const all = [...art, ...extra];
   console.log("exhibitions raw:", all.length);
   const inWin = all.filter((x) => x.start && num8(x.start) <= endWin && (!x.end || num8(x.end) >= today));
