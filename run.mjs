@@ -1,4 +1,5 @@
 // 매일 08:00 KST 다이제스트. 순서: 예매 → 축제 → 전시 → 콘서트 → 영화 → 책.
+// 한 섹션이 죽어도 나머지는 간다.
 import { sendMessage, pace, esc, link, chunkLines } from "./src/tg.mjs";
 import { kstLabel, ymd8, num8 } from "./src/dates.mjs";
 import { collectTickets } from "./src/tickets.mjs";
@@ -25,53 +26,56 @@ async function say(text) {
   sent.push(id);
   await pace();
 }
-// 오늘 진행중이면 🔴+굵게 (축제·콘서트·전시만)
+async function safe(name, fn) {
+  try {
+    await fn();
+  } catch (e) {
+    console.log(name + " FAILED: " + ((e && e.message) || e));
+  }
+}
+// 오늘 진행중이면 빨간점+굵게 (축제·콘서트·전시만)
 function itemLine(inner, url, active) {
-  return active ? `• 🔴 <b>${inner}</b> ${link(url)}` : `• ${inner} ${link(url)}`;
+  return active ? "• 🔴 <b>" + inner + "</b> " + link(url) : "• " + inner + " " + link(url);
 }
 const isToday = (from, to) => num8(from) <= today && today <= num8(to);
 const knex = (s) => String(s || "").replace(/^\d{4}\./, "");
 
 console.log("date:", dateLabel, "today:", today);
 
-// 1) 예매 오픈 (오늘~+7일)
-{
+await safe("tickets", async () => {
   const tk = await collectTickets(today, num8(ymd8(7)));
   console.log("tickets:", tk.length);
   const lines = tk.map((t) => {
     const hhmm = t.open.slice(11, 16);
     const md = t.open.slice(5, 10).replace("-", "/");
-    return `• ${esc(t.title)} (${esc(t.venue.slice(0, 12))}) | 예매 ${md} ${hhmm} ${link(t.url)}`;
+    return "• " + esc(t.title) + " (" + esc(t.region) + ") | 예매 " + md + " " + hhmm + " " + link(t.url);
   });
-  for (const [i, part] of chunkLines(lines).entries()) {
-    await say(`[공연·전시 티켓 예매 오픈 | ${dateLabel}]${chunkLines(lines).length > 1 ? ` | ${i + 1}` : ""}\n` + part.join("\n"));
+  const parts = chunkLines(lines);
+  for (let i = 0; i < parts.length; i++) {
+    await say("[공연·전시 티켓 예매 오픈 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
   }
-}
-// 2) 축제 (오늘~+30일, 시·도 권역·일정순)
-{
-  const { y, m, d } = (() => {
-    const s = ymd8(0);
-    return { y: +s.slice(0, 4), m: +s.slice(4, 6), d: +s.slice(6, 8) };
-  })();
-  const { total, groups } = await collectFestivals(y, m, d);
-  console.log("festivals:", total);
+});
+await safe("festivals", async () => {
+  const s = ymd8(0);
+  const y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
+  const res = await collectFestivals(y, m, d);
+  console.log("festivals:", res.total);
   for (const key of REGION_ORDER) {
-    const list = groups[key] || [];
+    const list = res.groups[key] || [];
     if (!list.length) continue;
     const lines = list.map((it) =>
-      itemLine(`${esc(it.name)} (${esc(shortArea(it.area))}) | ${esc(periodOf(it))}`, festUrl(it.id), isToday(it.start, it.end))
+      itemLine(esc(it.name) + " (" + esc(shortArea(it.area)) + ") | " + esc(periodOf(it)), festUrl(it.id), isToday(it.start, it.end))
     );
     const parts = chunkLines(lines);
-    for (const [i, part] of parts.entries()) {
+    for (let i = 0; i < parts.length; i++) {
       const head = parts.length > 1
-        ? `[지역축제·지역행사 | ${dateLabel} | ${REGION_LABEL[key]} ${list.length}건 | ${i + 1}/${parts.length}]`
-        : `[지역축제·지역행사 | ${dateLabel} | ${REGION_LABEL[key]} ${list.length}건]`;
-      await say(head + "\n" + part.join("\n"));
+        ? "[지역축제·지역행사 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건 | " + (i + 1) + "/" + parts.length + "]"
+        : "[지역축제·지역행사 | " + dateLabel + " | " + REGION_LABEL[key] + " " + list.length + "건]";
+      await say(head + "\n" + parts[i].join("\n"));
     }
   }
-}
-// 3) 전시 (오늘~+60일, 종료임박순)
-{
+});
+await safe("exhibitions", async () => {
   const endWin = num8(ymd8(60));
   const art = await collectArtcue();
   const seenT = new Set(art.map((x) => x.title));
@@ -84,20 +88,19 @@ console.log("date:", dateLabel, "today:", today);
   const lines = inWin.map((x) => {
     const where = ((x.region ? x.region + " " : "") + (x.venue || "")).trim().slice(0, 16) || "전국";
     return itemLine(
-      `${esc(x.title || "(제목 미상)")} (${esc(where)}) | ${esc(x.start)}~${esc(knex(x.end))}`,
+      esc(x.title || "(제목 미상)") + " (" + esc(where) + ") | " + esc(x.start) + "~" + esc(knex(x.end)),
       x.url, isToday(x.start, x.end || "9999.12.31")
     );
   });
   const parts = chunkLines(lines);
-  for (const [i, part] of parts.entries()) {
-    await say(`[전시·미술관·박물관 | ${dateLabel}${parts.length > 1 ? ` | ${i + 1}/${parts.length}` : ""}]\n` + part.join("\n"));
+  for (let i = 0; i < parts.length; i++) {
+    await say("[전시·미술관·박물관 | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) + "/" + parts.length : "") + "]\n" + parts[i].join("\n"));
   }
-}
-// 4) 콘서트·음악 (오늘~+60일, 6묶음·공연일순)
-{
+});
+await safe("concerts", async () => {
   const w1 = [ymd8(0), ymd8(30)];
   const w2 = [ymd8(31), ymd8(60)];
-  const raw = [...(await collectConcerts(KOPIS, ...w1)), ...(await collectConcerts(KOPIS, ...w2))];
+  const raw = [...(await collectConcerts(KOPIS, w1[0], w1[1])), ...(await collectConcerts(KOPIS, w2[0], w2[1]))];
   console.log("concerts raw:", raw.length);
   const groups = Object.fromEntries(CLUSTERS.map((c) => [c, []]));
   let skip = 0;
@@ -106,7 +109,7 @@ console.log("date:", dateLabel, "today:", today);
       skip++;
       continue;
     }
-    const hay = `${r.name} ${r.place} ${r.area}`;
+    const hay = r.name + " " + r.place + " " + r.area;
     const c = clusterOf(hay);
     if (!c) {
       skip++;
@@ -120,45 +123,43 @@ console.log("date:", dateLabel, "today:", today);
     const list = groups[k].sort((a, b) => num8(a.from) - num8(b.from));
     if (!list.length) continue;
     const lines = list.map((r) => {
-      const per = r.from === r.to ? r.from : `${r.from}~${knex(r.to)}`;
+      const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
       return itemLine(
-        `${esc(r.name)} (${esc(r._city || k)}) | 공연 ${esc(per)} | ${esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14))}`,
+        esc(r.name) + " (" + esc(r._city || k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
         kopisUrl(r.id), isToday(r.from, r.to)
       );
     });
     const parts = chunkLines(lines);
-    for (const [i, part] of parts.entries()) {
+    for (let i = 0; i < parts.length; i++) {
       const head = parts.length > 1
-        ? `[콘서트·음악 | ${dateLabel} | ${k} ${list.length}건 | ${i + 1}/${parts.length}]`
-        : `[콘서트·음악 | ${dateLabel} | ${k} ${list.length}건]`;
-      await say(head + "\n" + part.join("\n"));
+        ? "[콘서트·음악 | " + dateLabel + " | " + k + " " + list.length + "건 | " + (i + 1) + "/" + parts.length + "]"
+        : "[콘서트·음악 | " + dateLabel + " | " + k + " " + list.length + "건]";
+      await say(head + "\n" + parts[i].join("\n"));
     }
   }
-}
-// 5) 영화 (전일 박스 10 + 장르)
-{
-  const { dt, items } = await collectMovies(KOBIS);
-  console.log("movies:", dt, items.length);
-  const lines = items.map((x) => {
+});
+await safe("movies", async () => {
+  const res = await collectMovies(KOBIS);
+  console.log("movies:", res.dt, res.items.length);
+  const lines = res.items.map((x) => {
     const audi = Number(x.audi).toLocaleString("ko-KR");
-    const open = x.open ? `개봉 ${String(x.open).replace(/-/g, ".")} | ` : "";
-    return `${x.rank}. ${esc(x.name)} (전국) | ${esc(x.genre)} | ${open}전일 ${audi} ${link(naverMovie(x.name))}`;
+    const open = x.open ? "개봉 " + String(x.open).replace(/-/g, ".") + " | " : "";
+    return x.rank + ". " + esc(x.name) + " (전국) | " + esc(x.genre) + " | " + open + "전일 " + audi + " " + link(naverMovie(x.name));
   });
-  await say(`[영화 상영 | ${dateLabel}]\n` + lines.join("\n"));
-}
-// 6) 책 (베스트20 + 신간)
-{
+  await say("[영화 상영 | " + dateLabel + "]\n" + lines.join("\n"));
+});
+await safe("books", async () => {
   const best = await collectBooks();
   console.log("books best:", best.length);
-  const bl = (x) => `${x.rank}. ${esc(x.title)} | ${esc(x.author)} | ${esc(x.category)} | 평점 ${x.rating} ${link(x.url)}`;
+  const bl = (x) => x.rank + ". " + esc(x.title) + " | " + esc(x.author) + " | " + esc(x.category) + " | 평점 " + x.rating + " " + link(x.url);
   const parts = chunkLines(best.map(bl));
-  for (const [i, part] of parts.entries()) {
-    await say(`[도서 베스트셀러 | ${dateLabel}]${parts.length > 1 ? ` | ${i + 1}` : ""}\n` + part.join("\n"));
+  for (let i = 0; i < parts.length; i++) {
+    await say("[도서 베스트셀러 | " + dateLabel + "]" + (parts.length > 1 ? " | " + (i + 1) : "") + "\n" + parts[i].join("\n"));
   }
   const news = await collectNewBooks();
   console.log("books new:", news.length);
   if (news.length) {
-    await say(`[도서 신간 | ${dateLabel}]\n` + news.map(bl).join("\n"));
+    await say("[도서 신간 | " + dateLabel + "]\n" + news.map(bl).join("\n"));
   }
-}
+});
 console.log("sent messages:", sent.length);
