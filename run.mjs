@@ -1,6 +1,6 @@
 // 매일 08:00 KST 다이제스트. 순서: 예매 → 축제 → 전시 → 콘서트 → 영화 → 책.
 // 한 섹션이 죽어도 나머지는 간다.
-import { sendMessage, pace, esc, link, chunkLines } from "./src/tg.mjs";
+import { sendMessage, pace, esc, link, chunkLines, brackets } from "./src/tg.mjs";
 import { kstLabel, ymd8, num8 } from "./src/dates.mjs";
 import { collectTickets } from "./src/tickets.mjs";
 import { ruleAlerts } from "./src/stays.mjs";
@@ -215,7 +215,7 @@ await safe("concerts", async () => {
     const lines = list.map((r) => {
       const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
       return itemLine(
-        esc(r.name) + " (" + esc(r._city || k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
+        esc(brackets(r.name)) + " (" + esc(r._city || k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
         kopisUrl(r.id), isToday(r.from, r.to)
       );
     });
