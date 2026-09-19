@@ -6,3 +6,5 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Seoul
+    volumes:
+      - ./logs:/var/log
