@@ -9,8 +9,9 @@ function ju(s) {
     return s;
   }
 }
+// <작품명> 보존: 서식 태그만 제거
 function stripTags(s) {
-  return String(s || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return String(s || "").replace(/<\/?(b|strong|em|i|span|font|p|br)[^>]*>/gi, " ").replace(/\s+/g, " ").trim();
 }
 function cleanTitle(s) {
   return stripTags(s).replace(/티켓\s*오픈\s*안내\s*$/g, "").replace(/\[\s*단독판매\s*\]/g, "").trim();
