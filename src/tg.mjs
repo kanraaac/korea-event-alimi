@@ -50,24 +50,33 @@ export async function sendMessage(tok, chatId, text, dry) {
     console.log("[DRY] " + text.slice(0, 140).replace(/\n/g, " | ") + " ...");
     return -1;
   }
-  for (let a = 0; a < 4; a++) {
-    const r = await fetch(api(tok) + "/sendMessage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
-    });
-    const j = await r.json();
-    if (j.ok) return j.result.message_id;
-    if (j.error_code === 429 && j.parameters?.retry_after) {
-      await new Promise((rr) => setTimeout(rr, (j.parameters.retry_after + 1) * 1000));
-      continue;
+  for (let a = 0; a < 5; a++) {
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 15000);
+      const r = await fetch(api(tok) + "/sendMessage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        }),
+        signal: ac.signal,
+      });
+      clearTimeout(t);
+      const j = await r.json();
+      if (j.ok) return j.result.message_id;
+      if (j.error_code === 429 && j.parameters && j.parameters.retry_after) {
+        await new Promise((rr) => setTimeout(rr, (j.parameters.retry_after + 1) * 1000));
+        continue;
+      }
+      throw new Error("telegram: " + (j.description || "unknown"));
+    } catch (e) {
+      if (a === 4) throw e;
+      await new Promise((rr) => setTimeout(rr, 1200));
     }
-    throw new Error("telegram: " + (j.description || "unknown"));
   }
   throw new Error("telegram: rate limited");
 }
