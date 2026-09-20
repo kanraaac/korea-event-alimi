@@ -35,12 +35,18 @@ export function merge(raw) {
   if (Number.isFinite(+raw.minute)) s.minute = Math.min(59, Math.max(0, Math.trunc(+raw.minute)));
   if (raw.topics && typeof raw.topics === "object") {
     for (const k of Object.keys(s.topics)) s.topics[k] = !!raw.topics[k];
+    if (raw.topics.pop === undefined && raw.topics.classic === undefined && raw.topics.concerts !== undefined) {
+      s.topics.pop = !!raw.topics.concerts;
+      s.topics.classic = !!raw.topics.concerts;
+    }
   }
   if (raw.days && typeof raw.days === "object") {
     for (const k of Object.keys(s.days)) {
       const n = Math.trunc(+raw.days[k]);
       if (Number.isFinite(n)) s.days[k] = Math.min(90, Math.max(1, n));
     }
+    if (raw.days.pop === undefined && raw.days.concerts) s.days.pop = s.days.concerts;
+    if (raw.days.classic === undefined && raw.days.concerts) s.days.classic = s.days.concerts;
   }
   if (raw.regions && typeof raw.regions === "object") {
     for (const k of REGIONS) s.regions[k] = !!raw.regions[k];
