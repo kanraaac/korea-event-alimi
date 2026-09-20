@@ -1,7 +1,29 @@
-// 예스24 베스트셀러 20 + 신간. 상세페이지에서 저자·평점·분류 보강.
+// 예스24 일간 베스트. 분류는 예스24 국내도서 카테고리 번호.
 import { getText } from "./http.mjs";
-const UA_LIST = "https://www.yes24.com/Product/Category/DayBestSeller?categoryNumber=001";
-const UA_NEW = "https://www.yes24.com/product/category/newproduct?categoryNumber=001";
+
+export const BOOK_CATS = [
+  { id: "001", label: "종합" },
+  { id: "001001", label: "소설/시/희곡" },
+  { id: "001002", label: "에세이" },
+  { id: "001007", label: "경제경영" },
+  { id: "001010", label: "자기계발" },
+  { id: "001011", label: "인문" },
+  { id: "001013", label: "역사" },
+  { id: "001003", label: "여행" },
+  { id: "001019", label: "자연과학" },
+  { id: "001020", label: "사회정치" },
+  { id: "001023", label: "만화" },
+  { id: "001025", label: "어린이" },
+  { id: "001027", label: "유아" },
+  { id: "001028", label: "청소년" },
+  { id: "001029", label: "IT모바일" },
+  { id: "001006", label: "건강취미" },
+];
+
+function listUrl(cat) {
+  return "https://www.yes24.com/Product/Category/DayBestSeller?categoryNumber=" + encodeURIComponent(cat);
+}
+
 async function listGoods(url, limit, ranked) {
   const h = await getText(url);
   const blocks = h.split(/<li[^>]*data-goods-no="/).slice(1);
@@ -19,6 +41,7 @@ async function listGoods(url, limit, ranked) {
   }
   return items.sort((a, b) => a.rank - b.rank);
 }
+
 async function enrich(it) {
   try {
     const h = await getText("https://www.yes24.com/product/goods/" + it.id, 2);
@@ -35,18 +58,22 @@ async function enrich(it) {
   it.url = "https://www.yes24.com/product/goods/" + it.id;
   return it;
 }
+
 function tpAuthor(tp) {
   return tp[1] || "-";
 }
-export async function collectBooks() {
-  const items = await listGoods(UA_LIST, 20, true);
+
+export async function collectBooks(limit = 20, cat = "001") {
+  const n = Math.min(20, Math.max(1, Math.trunc(+limit) || 20));
+  const items = await listGoods(listUrl(cat || "001"), n, true);
   for (const it of items) await enrich(it);
   return items;
 }
+
 export async function collectNewBooks() {
   let items = [];
   try {
-    items = await listGoods(UA_NEW, 6, false);
+    items = await listGoods("https://www.yes24.com/product/category/newproduct?categoryNumber=001", 6, false);
   } catch (e) {
     items = [];
   }
