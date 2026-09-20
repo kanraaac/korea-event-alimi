@@ -7,7 +7,7 @@ import { collectFestivals, shortArea, periodOf, festUrl } from "./src/festivals.
 import { collectConcerts, kopisUrl } from "./src/concerts.mjs";
 import { collectArtcue, collectSema, collectLeeum, collectHoam, collectArko } from "./src/exhibitions.mjs";
 import { collectMovies, naverMovie } from "./src/movies.mjs";
-import { collectBooks } from "./src/books.mjs";
+import { collectBooks, BOOK_CATS } from "./src/books.mjs";
 import { clusterOf, REGIONS } from "./src/regions.mjs";
 import { loadSettings } from "./src/settings.mjs";
 
@@ -45,6 +45,10 @@ const isToday = (from, to) => num8(from) <= today && today <= num8(to);
 const knex = (s) => String(s || "").replace(/^\d{4}\./, "");
 function want(r) {
   return enabled.includes(r);
+}
+function byTime(aKey, bKey, aLive, bLive) {
+  if (!!aLive !== !!bLive) return aLive ? -1 : 1;
+  return aKey - bKey;
 }
 async function sendPacked(title, blocks) {
   const chunks = [];
@@ -86,15 +90,13 @@ async function sendPacked(title, blocks) {
   }
 }
 async function sendGrouped(titleBase, groups) {
+  const blocks = [];
   for (const k of enabled) {
     const list = groups[k] || [];
     if (!list.length) continue;
-    const parts = chunkLines(gapEvery(list));
-    for (let i = 0; i < parts.length; i++) {
-      const t = titleBase + " | " + k + " " + list.length + "건" + (parts.length > 1 ? " | " + (i + 1) + "/" + parts.length : "");
-      await say(heading(t) + "\n\n" + parts[i].join("\n"));
-    }
+    blocks.push({ k: k, lines: list });
   }
+  await sendPacked(titleBase, blocks);
 }
 
 console.log("date:", dateLabel, "today:", today, "hour:", cfg.hour, "regions:", enabled.join(","));
@@ -111,8 +113,9 @@ if (cfg.topics.tickets) await safe("tickets", async () => {
   const grouped = (items) => {
     const blocks = [];
     for (const k of enabled) {
-      const list = items.filter((t) => clusterOf(t.title + " " + t.region) === k);
-      if (list.length) blocks.push({ k, lines: list.map(tline) });
+      const list = items.filter((t) => clusterOf(t.title + " " + t.region) === k)
+        .sort((a, b) => String(a.open || "").localeCompare(String(b.open || "")));
+      if (list.length) blocks.push({ k: k, lines: list.map(tline) });
     }
     return blocks;
   };
@@ -129,13 +132,18 @@ if (cfg.topics.festivals) await safe("festivals", async () => {
   const y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
   const res = await collectFestivals(y, m, d, cfg.days.festivals);
   console.log("festivals:", res.total);
-  const groups = Object.fromEntries(enabled.map((k) => [k, []]));
+  const bags = Object.fromEntries(enabled.map((k) => [k, []]));
   for (const list of Object.values(res.groups || {})) {
     for (const it of list) {
       const k = clusterOf(it.name + " " + it.area);
       if (!want(k)) continue;
-      groups[k].push(itemLine(esc(it.name) + " (" + esc(shortArea(it.area)) + ") | " + esc(periodOf(it)), festUrl(it.id), isToday(it.start, it.end)));
+      bags[k].push(it);
     }
+  }
+  const groups = {};
+  for (const k of enabled) {
+    bags[k].sort((a, b) => byTime(num8(a.start), num8(b.start), isToday(a.start, a.end), isToday(b.start, b.end)));
+    groups[k] = bags[k].map((it) => itemLine(esc(it.name) + " (" + esc(shortArea(it.area)) + ") | " + esc(periodOf(it)), festUrl(it.id), isToday(it.start, it.end)));
   }
   await sendGrouped("지역축제·지역행사 | " + dateLabel, groups);
 });
@@ -148,17 +156,23 @@ if (cfg.topics.exhibitions) await safe("exhibitions", async () => {
   const all = [...art, ...extra];
   console.log("exhibitions raw:", all.length);
   const inWin = all.filter((x) => x.start && num8(x.start) <= endWin && (!x.end || num8(x.end) >= today));
-  inWin.sort((a, b) => num8(a.end || "9999") - num8(b.end || "9999"));
   console.log("exhibitions inWin:", inWin.length);
-  const groups = Object.fromEntries(enabled.map((k) => [k, []]));
+  const bags = Object.fromEntries(enabled.map((k) => [k, []]));
   for (const x of inWin) {
     const k = clusterOf((x.region || "") + " " + (x.title || "") + " " + (x.venue || ""));
     if (!want(k)) continue;
-    const where = ((x.region ? x.region + " " : "") + (x.venue || "")).trim().slice(0, 16) || "전국";
-    groups[k].push(itemLine(
-      esc(x.title || "(제목 미상)") + " (" + esc(where) + ") | " + esc(x.start) + "~" + esc(knex(x.end)),
-      x.url, isToday(x.start, x.end || "9999.12.31")
-    ));
+    bags[k].push(x);
+  }
+  const groups = {};
+  for (const k of enabled) {
+    bags[k].sort((a, b) => byTime(num8(a.start), num8(b.start), isToday(a.start, a.end || "9999.12.31"), isToday(b.start, b.end || "9999.12.31")));
+    groups[k] = bags[k].map((x) => {
+      const where = ((x.region ? x.region + " " : "") + (x.venue || "")).trim().slice(0, 16) || "전국";
+      return itemLine(
+        esc(x.title || "(제목 미상)") + " (" + esc(where) + ") | " + esc(x.start) + "~" + esc(knex(x.end)),
+        x.url, isToday(x.start, x.end || "9999.12.31")
+      );
+    });
   }
   await sendGrouped("전시·미술관·박물관 | " + dateLabel, groups);
 });
@@ -232,17 +246,18 @@ if (cfg.topics.movies) await safe("movies", async () => {
 });
 
 if (cfg.topics.books) await safe("books", async () => {
-  const best = await collectBooks();
-  console.log("books best:", best.length);
+  const n = cfg.counts?.books || 10;
+  const cats = BOOK_CATS.filter((c) => !!(cfg.bookCats && cfg.bookCats[c.id]));
+  console.log("books cats:", cats.map((c) => c.label).join(",") || "(none)");
+  if (!cats.length) return;
   const bl = (x) => x.rank + ". " + esc(x.title) + " | " + esc(x.author) + " | " + esc(x.category) + " | 평점 " + x.rating + " " + link(x.url);
-  const parts = chunkLines(gapEvery(best.map(bl)));
-  for (let i = 0; i < parts.length; i++) {
-    await say(heading("도서 베스트셀러 | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
-  }
-});
-
-console.log("sent messages:", sent.length);
- "")) + "\n\n" + parts[i].join("\n"));
+  for (const cat of cats) {
+    const best = await collectBooks(n, cat.id);
+    console.log("books", cat.id, cat.label, best.length);
+    if (!best.length) continue;
+    const parts = chunkLines(gapEvery(best.map(bl)));
+    for (let i = 0; i < parts.length; i++) {
+      await say(heading("도서 베스트셀러 | " + cat.label + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
     }
   }
 });
