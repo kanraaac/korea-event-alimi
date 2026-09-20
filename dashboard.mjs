@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { loadSettings, saveSettings, writeCrontab } from "./src/settings.mjs";
 import { REGIONS, REGION_HINT } from "./src/regions.mjs";
+import { BOOK_CATS } from "./src/books.mjs";
 
 const PORT = Number(process.env.DASHBOARD_PORT || 8080);
 const PASS = process.env.DASHBOARD_PASSWORD || "";
