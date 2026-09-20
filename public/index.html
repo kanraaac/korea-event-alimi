@@ -21,6 +21,7 @@
     .topic { display:flex; align-items:center; gap:10px; margin: 0 0 12px; font-size: 14px; flex-wrap: wrap; }
     .topic .name { flex: 1 1 180px; }
     .topic .days { color: var(--muted); display:flex; align-items:center; gap:6px; white-space: nowrap; }
+    .subcats { margin: -4px 0 14px 28px; display:grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; }
     button { border:0; border-radius:10px; padding:11px 16px; font-size:14px; cursor:pointer; }
     button.primary { background: var(--accent); color:#fff; }
@@ -41,7 +42,7 @@
   </section>
 
   <section>
-    <h2>보낼 분야 · 오늘부터 며칠</h2>
+    <h2>보낼 분야</h2>
     <div id="topics"></div>
   </section>
 
@@ -68,12 +69,26 @@ const TOPICS = [
   { k: "pop", label: "대중음악", days: true },
   { k: "classic", label: "클래식", days: true },
   { k: "stays", label: "공공예약 오픈 임박", days: true },
-  { k: "movies", label: "영화 (전일 박스)", days: false },
-  { k: "books", label: "도서 베스트셀러", days: false },
+  { k: "movies", label: "영화 (전일 박스)", count: true, unit: "편", max: 10 },
+  { k: "books", label: "도서 베스트셀러", count: true, unit: "권", max: 20 },
 ];
 let state;
 function box(id, label, checked, hint) {
-  return `<label class="row"><input type="checkbox" id="${id}" ${checked ? "checked" : ""}><span>${label}${hint ? `<span class="hint">${hint}</span>` : ""}</span></label>`;
+  return '<label class="row"><input type="checkbox" id="' + id + '"' + (checked ? " checked" : "") + "><span>" + label + (hint ? '<span class="hint">' + hint + "</span>" : "") + "</span></label>";
+}
+function topicHtml(t, j) {
+  var extra;
+  if (t.days) extra = '<span class="days">오늘부터 <input type="number" min="1" max="90" id="d_' + t.k + '" value="' + (state.days[t.k] || 1) + '" style="width:72px"> 일</span>';
+  else if (t.count) extra = '<span class="days">상위 <input type="number" min="1" max="' + t.max + '" id="c_' + t.k + '" value="' + ((state.counts && state.counts[t.k]) || 10) + '" style="width:72px"> ' + t.unit + "</span>";
+  else extra = '<span class="days"></span>';
+  var row = '<div class="topic"><input type="checkbox" id="t_' + t.k + '"' + (state.topics[t.k] ? " checked" : "") + '><span class="name">' + t.label + "</span>" + extra + "</div>";
+  if (t.k !== "books") return row;
+  var cats = j.bookCats || [];
+  var sub = '<div class="subcats">' + cats.map(function (c) {
+    var on = state.bookCats && state.bookCats[c.id];
+    return '<label class="row"><input type="checkbox" id="bc_' + c.id + '"' + (on ? " checked" : "") + "><span>" + c.label + "</span></label>";
+  }).join("") + "</div>";
+  return row + sub;
 }
 async function load() {
   const r = await fetch("/api/settings");
@@ -81,13 +96,8 @@ async function load() {
   state = j.settings;
   document.getElementById("hour").value = state.hour;
   document.getElementById("minute").value = state.minute;
-  document.getElementById("topics").innerHTML = TOPICS.map((t) => {
-    const days = t.days
-      ? `<span class="days">오늘부터 <input type="number" min="1" max="90" id="d_${t.k}" value="${state.days[t.k] || 1}" style="width:72px"> 일</span>`
-      : `<span class="days">기간 없음</span>`;
-    return `<div class="topic"><input type="checkbox" id="t_${t.k}" ${state.topics[t.k] ? "checked" : ""}><span class="name">${t.label}</span>${days}</div>`;
-  }).join("");
-  document.getElementById("regions").innerHTML = j.regions.map((k) => box("r_"+k, k, state.regions[k], j.hints[k])).join("");
+  document.getElementById("topics").innerHTML = TOPICS.map(function (t) { return topicHtml(t, j); }).join("");
+  document.getElementById("regions").innerHTML = j.regions.map(function (k) { return box("r_" + k, k, state.regions[k], j.hints[k]); }).join("");
   if (j.hasPass) document.getElementById("passRow").style.display = "flex";
 }
 function collect() {
@@ -95,19 +105,23 @@ function collect() {
   const days = {};
   const counts = {};
   for (const t of TOPICS) {
-    topics[t.k] = document.getElementById("t_"+t.k).checked;
-    if (t.days) days[t.k] = Number(document.getElementById("d_"+t.k).value);
-    if (t.count) counts[t.k] = Number(document.getElementById("c_"+t.k).value);
+    topics[t.k] = document.getElementById("t_" + t.k).checked;
+    if (t.days) days[t.k] = Number(document.getElementById("d_" + t.k).value);
+    if (t.count) counts[t.k] = Number(document.getElementById("c_" + t.k).value);
   }
   const bookCats = {};
-  document.querySelectorAll("[id^=bc_]").forEach((el) => { bookCats[el.id.slice(3)] = el.checked; });
+  document.querySelectorAll("[id^=bc_]").forEach(function (el) { bookCats[el.id.slice(3)] = el.checked; });
   const regions = {};
-  document.querySelectorAll("[id^=r_]").forEach((el) => { regions[el.id.slice(2)] = el.checked; });
+  document.querySelectorAll("[id^=r_]").forEach(function (el) { regions[el.id.slice(2)] = el.checked; });
   return {
     hour: Number(document.getElementById("hour").value),
     minute: Number(document.getElementById("minute").value),
-    topics, days, counts, bookCats, regions,
-    password: document.getElementById("password").value,
+    topics: topics,
+    days: days,
+    counts: counts,
+    bookCats: bookCats,
+    regions: regions,
+    password: document.getElementById("password").value
   };
 }
 function msg(t, err) {
@@ -115,25 +129,16 @@ function msg(t, err) {
   el.className = err ? "err" : "";
   el.textContent = t;
 }
-document.getElementById("save").onclick = async () => {
+document.getElementById("save").onclick = async function () {
   msg("저장 중...");
-  const r = await fetch("/api/settings", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(collect()) });
+  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(collect()) });
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
   msg("저장했다. 다음 발송부터 적용된다.");
 };
-document.getElementById("run").onclick = async () => {
+document.getElementById("run").onclick = async function () {
   msg("발송을 시작했다. 채널을 확인하면 된다.");
-  const r = await fetch("/api/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
-  const j = await r.json();
-  if (!r.ok) return msg(j.error || "실패", true);
-};
-load();
-</script>
-</body>
-</html>
-�작했다. 채널을 확인하면 된다.");
-  const r = await fetch("/api/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
+  const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
 };
