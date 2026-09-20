@@ -10,6 +10,8 @@ import { collectMovies, naverMovie } from "./src/movies.mjs";
 import { collectBooks, BOOK_CATS } from "./src/books.mjs";
 import { clusterOf, REGIONS } from "./src/regions.mjs";
 import { loadSettings } from "./src/settings.mjs";
+import { writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 const DRY = process.env.DRY_RUN === "1";
 const PREVIEW = process.env.PREVIEW === "1";
@@ -187,9 +189,8 @@ if (cfg.topics.exhibitions) await safe("exhibitions", async () => {
   await sendGrouped("전시·미술관·박물관 | " + dateLabel, groups);
 });
 
-const wantPop = cfg.topics.pop !== false && (cfg.topics.pop || cfg.topics.concerts);
-const wantClassic = cfg.topics.classic !== false && (cfg.topics.classic || cfg.topics.concerts);
 if (wantPop || wantClassic) await safe("concerts", async () => {
+  if (wantPop) await progress("대중음악");
   const popDays = cfg.days.pop || cfg.days.concerts || 15;
   const classicDays = cfg.days.classic || cfg.days.concerts || 15;
   const maxDays = Math.max(wantPop ? popDays : 0, wantClassic ? classicDays : 0);
@@ -230,10 +231,15 @@ if (wantPop || wantClassic) await safe("concerts", async () => {
     await sendGrouped(label + " | " + dateLabel, groups);
   }
   if (wantPop) await sendKind("대중음악", "pop", popDays);
-  if (wantClassic) await sendKind("클래식", "classic", classicDays);
+  if (wantClassic) {
+    if (wantPop) await progress("클래식");
+    else await progress("클래식");
+    await sendKind("클래식", "classic", classicDays);
+  }
 });
 
 if (cfg.topics.movies) await safe("movies", async () => {
+  await progress("영화");
   const res = await collectMovies(KOBIS, cfg.counts?.movies || 10);
   console.log("movies:", res.dt, res.items.length);
   if (!res.items.length) return;
@@ -258,11 +264,12 @@ if (cfg.topics.books) await safe("books", async () => {
   const tag = onlyAll ? "종합" : picked.map((c) => c.label).join(", ");
   const parts = chunkLines(gapEvery(best.map(bl)));
   for (let i = 0; i < parts.length; i++) {
-    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
+    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) + " / " + parts.length : "")) + "\n\n" + parts[i].join("\n"));
   }
 });
 
 if (cfg.topics.stays) await safe("stays", async () => {
+  await progress("공공예약");
   const alerts = ruleAlerts(today, cfg.days.stays);
   console.log("stays alerts:", alerts.length);
   if (alerts.length) {
@@ -275,3 +282,4 @@ if (cfg.topics.stays) await safe("stays", async () => {
 
 if (PREVIEW) console.log("PREVIEW_JSON:" + JSON.stringify(drafts));
 console.log("sent messages:", sent.length);
+await progressDone();
