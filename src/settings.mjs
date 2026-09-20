@@ -64,9 +64,7 @@ export function merge(raw) {
     if (Number.isFinite(+raw.counts.books)) s.counts.books = Math.min(20, Math.max(1, Math.trunc(+raw.counts.books)));
   }
   if (raw.bookCats && typeof raw.bookCats === "object") {
-    for (const c of BOOK_CATS) {
-      if (raw.bookCats[c.id] !== undefined) s.bookCats[c.id] = !!raw.bookCats[c.id];
-    }
+    for (const c of BOOK_CATS) s.bookCats[c.id] = !!raw.bookCats[c.id];
   }
   if (raw.regions && typeof raw.regions === "object") {
     for (const k of REGIONS) {
