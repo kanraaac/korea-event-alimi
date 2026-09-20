@@ -214,7 +214,7 @@ if (cfg.topics.stays) await safe("stays", async () => {
 });
 
 if (cfg.topics.movies) await safe("movies", async () => {
-  const res = await collectMovies(KOBIS);
+  const res = await collectMovies(KOBIS, cfg.counts?.movies || 10);
   console.log("movies:", res.dt, res.items.length);
   const lines = gapEvery(res.items.map((x) => {
     const audi = Number(x.audi).toLocaleString("ko-KR");
