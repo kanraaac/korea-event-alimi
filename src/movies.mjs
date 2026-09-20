@@ -16,7 +16,8 @@ export async function collectMovies(key) {
       const j = await getJson(
         `https://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(key)}&targetDt=${t}`
       );
-      const l = (j.boxOfficeResult?.dailyBoxOfficeList || []).slice(0, 10);
+      const cap = Math.min(10, Math.max(1, Math.trunc(+limit) || 10));
+      const l = (j.boxOfficeResult?.dailyBoxOfficeList || []).slice(0, cap);
       if (l.length) {
         list = l;
         dt = t;
