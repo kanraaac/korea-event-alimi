@@ -81,6 +81,3 @@ export async function collectNewBooks() {
   for (const it of items) await enrich(it);
   return items;
 }
- it of items) await enrich(it);
-  return items;
-}
