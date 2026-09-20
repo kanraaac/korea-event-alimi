@@ -163,29 +163,43 @@ if (cfg.topics.exhibitions) await safe("exhibitions", async () => {
   await sendGrouped("전시·미술관·박물관 | " + dateLabel, groups);
 });
 
-if (cfg.topics.concerts) await safe("concerts", async () => {
-  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(cfg.days.concerts));
+const wantPop = cfg.topics.pop !== false && (cfg.topics.pop || cfg.topics.concerts);
+const wantClassic = cfg.topics.classic !== false && (cfg.topics.classic || cfg.topics.concerts);
+if (wantPop || wantClassic) await safe("concerts", async () => {
+  const popDays = cfg.days.pop || cfg.days.concerts || 15;
+  const classicDays = cfg.days.classic || cfg.days.concerts || 15;
+  const maxDays = Math.max(wantPop ? popDays : 0, wantClassic ? classicDays : 0);
+  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(maxDays));
   console.log("concerts raw:", raw.length);
-  const groups = Object.fromEntries(enabled.map((k) => [k, []]));
-  let skip = 0;
-  for (const r of raw) {
-    if (!(num8(r.from) <= num8(ymd8(cfg.days.concerts)) && num8(r.to) >= today)) {
-      skip++;
-      continue;
-    }
-    const k = clusterOf(r.area + " " + r.name + " " + r.place);
-    if (!want(k)) {
-      skip++;
-      continue;
-    }
-    const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
-    groups[k].push(itemLine(
-      esc(brackets(r.name)) + " (" + esc(k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
-      kopisUrl(r.id), isToday(r.from, r.to)
-    ));
+  function kindOf(r) {
+    if (r.cate === "CCCA" || /클래식|오페라|교향|실내악|합창/.test(r.genre || "")) return "classic";
+    return "pop";
   }
-  console.log("concerts skipped:", skip);
-  await sendGrouped("콘서트·음악 | " + dateLabel, groups);
+  async function sendKind(label, kind, days) {
+    const groups = Object.fromEntries(enabled.map((k) => [k, []]));
+    let skip = 0;
+    for (const r of raw) {
+      if (kindOf(r) !== kind) continue;
+      if (!(num8(r.from) <= num8(ymd8(days)) && num8(r.to) >= today)) {
+        skip++;
+        continue;
+      }
+      const k = clusterOf(r.area + " " + r.name + " " + r.place);
+      if (!want(k)) {
+        skip++;
+        continue;
+      }
+      const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
+      groups[k].push(itemLine(
+        esc(brackets(r.name)) + " (" + esc(k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
+        kopisUrl(r.id), isToday(r.from, r.to)
+      ));
+    }
+    console.log(kind + " skipped:", skip);
+    await sendGrouped(label + " | " + dateLabel, groups);
+  }
+  if (wantPop) await sendKind("대중음악", "pop", popDays);
+  if (wantClassic) await sendKind("클래식", "classic", classicDays);
 });
 
 if (cfg.topics.stays) await safe("stays", async () => {
