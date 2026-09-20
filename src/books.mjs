@@ -13,6 +13,7 @@ export const BOOK_CATS = [
   { id: "001019", label: "자연과학" },
   { id: "001020", label: "사회정치" },
   { id: "001023", label: "만화" },
+  { id: "001024", label: "수험서 자격증" },
   { id: "001025", label: "어린이" },
   { id: "001027", label: "유아" },
   { id: "001028", label: "청소년" },
@@ -21,7 +22,7 @@ export const BOOK_CATS = [
 ];
 
 function listUrl(cat) {
-  return "https://www.yes24.com/Product/Category/DayBestSeller?categoryNumber=" + encodeURIComponent(cat);
+  return "https://www.yes24.com/Product/Category/DayBestSeller?CategoryNumber=" + encodeURIComponent(cat);
 }
 
 async function listGoods(url, limit, ranked) {
@@ -78,5 +79,8 @@ export async function collectNewBooks() {
     items = [];
   }
   for (const it of items) await enrich(it);
+  return items;
+}
+ it of items) await enrich(it);
   return items;
 }
