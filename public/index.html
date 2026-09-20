@@ -29,8 +29,6 @@
     button.ghost { background: transparent; color:var(--text); border:1px solid var(--line); }
     #msg { min-height: 22px; color:#7ddea0; font-size:13px; margin-top:10px; }
     #msg.err { color:#ff8a8a; }
-    .bubble { background:#0f1419; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:0 0 12px; white-space:pre-wrap; font-size:13px; line-height:1.55; }
-    .bubble a { color:#7db4ff; }
   </style>
 </head>
 <body>
@@ -73,7 +71,7 @@ const TOPICS = [
   { k: "classic", label: "클래식", days: true },
   { k: "stays", label: "공공예약 오픈 임박", days: true },
   { k: "movies", label: "영화 (전일 박스)", count: true, unit: "편", max: 20 },
-  { k: "books", label: "도서 베스트셀러", count: true, unit: "권", max: 50 },
+  { k: "books", label: "도서 베스트셀러", count: true, unit: "권", max: 50 }
 ];
 let state;
 function box(id, label, checked, hint) {
@@ -150,12 +148,6 @@ document.getElementById("run").onclick = async function () {
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
   msg("발송을 시작했다. 채널을 확인하면 된다.");
-};
-load();
-</script>
-</body>
-</html>
-면 된다.");
 };
 load();
 </script>
