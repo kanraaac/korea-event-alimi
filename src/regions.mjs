@@ -18,7 +18,7 @@ export function clusterOf(hay) {
   const br = (hay.match(/\[([가-힣]+)\]/) || [])[1] || "";
   const H = br + " " + hay;
   if (/제주|서귀포|한라/.test(H)) return "";
-  if (/부산|해운대|벡스코|수영|동래|기장|낙동/.test(H)) return "부산";
+  if (/부산|해운대|벡스코|기장|동래/.test(H)) return "부산";
   if (/대구/.test(H)) return "대구";
   if (/울산/.test(H)) return "울산";
   if (/경주|불국사|보문단지|황리단|경주월드/.test(H)) return "경주";
