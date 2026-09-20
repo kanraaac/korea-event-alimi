@@ -28,6 +28,8 @@
     button.ghost { background: transparent; color:var(--text); border:1px solid var(--line); }
     #msg { min-height: 22px; color:#7ddea0; font-size:13px; margin-top:10px; }
     #msg.err { color:#ff8a8a; }
+    .bubble { background:#0f1419; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:0 0 12px; white-space:pre-wrap; font-size:13px; line-height:1.55; }
+    .bubble a { color:#7db4ff; }
   </style>
 </head>
 <body>
@@ -56,9 +58,14 @@
     <label class="row" id="passRow" style="display:none">비밀번호 <input id="password" type="password"></label>
     <div class="actions">
       <button class="primary" id="save">저장</button>
+      <button class="ghost" id="preview">미리보기</button>
       <button class="ghost" id="run">지금 한 번 보내기</button>
     </div>
     <div id="msg"></div>
+  </section>
+  <section>
+    <h2>보낼 내용 미리보기</h2>
+    <div id="previewBox"><p class="sub">미리보기를 누르면 텔레그램에 보내지 않고 아래에 표시한다. 수집에 1~3분 걸린다.</p></div>
   </section>
 </main>
 <script>
