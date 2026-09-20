@@ -16,6 +16,17 @@ export const pace = () => new Promise((r) => setTimeout(r, 1100));
 export function brackets(s) {
   return String(s ?? "").replace(/<([^<>]+)>/g, "〈$1〉");
 }
+export function heading(s) {
+  return "▣ <b>" + s + "</b>";
+}
+export function gapEvery(lines, n = 5) {
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    out.push(lines[i]);
+    if ((i + 1) % n === 0 && i + 1 < lines.length) out.push("");
+  }
+  return out;
+}
 export function chunkLines(lines, headLen = 90, max = 3500) {
   const parts = [];
   let buf = [],
