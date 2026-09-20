@@ -60,8 +60,8 @@ export function merge(raw) {
     if (raw.days.classic === undefined && raw.days.concerts) s.days.classic = s.days.concerts;
   }
   if (raw.counts && typeof raw.counts === "object") {
-    if (Number.isFinite(+raw.counts.movies)) s.counts.movies = Math.min(10, Math.max(1, Math.trunc(+raw.counts.movies)));
-    if (Number.isFinite(+raw.counts.books)) s.counts.books = Math.min(20, Math.max(1, Math.trunc(+raw.counts.books)));
+    if (Number.isFinite(+raw.counts.movies)) s.counts.movies = Math.min(20, Math.max(1, Math.trunc(+raw.counts.movies)));
+    if (Number.isFinite(+raw.counts.books)) s.counts.books = Math.min(50, Math.max(1, Math.trunc(+raw.counts.books)));
   }
   if (raw.bookCats && typeof raw.bookCats === "object") {
     for (const c of BOOK_CATS) s.bookCats[c.id] = !!raw.bookCats[c.id];
