@@ -48,7 +48,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && u.pathname === "/api/settings") {
       const s = await loadSettings();
-      ok(res, { settings: s, regions: REGIONS, hints: REGION_HINT, hasPass: !!PASS });
+      ok(res, { settings: s, regions: REGIONS, hints: REGION_HINT, hasPass: !!PASS, bookCats: BOOK_CATS });
       return;
     }
     if (req.method === "POST" && u.pathname === "/api/settings") {
