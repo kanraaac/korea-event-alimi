@@ -74,10 +74,10 @@ function tpAuthor(tp) {
 }
 
 export async function collectBooks(pool = 60) {
-  const want = Math.min(80, Math.max(20, Math.trunc(+pool) || 60));
+  const want = Math.min(120, Math.max(20, Math.trunc(+pool) || 60));
   const seen = new Set();
   const items = [];
-  for (let page = 1; page <= 4 && items.length < want; page++) {
+  for (let page = 1; page <= 6 && items.length < want; page++) {
     const url = "https://www.yes24.com/Product/Category/DayBestSeller?CategoryNumber=001&pageNumber=" + page + "&pageSize=24";
     const chunk = await listGoods(url, 24, true);
     if (!chunk.length) break;
