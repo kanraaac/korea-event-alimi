@@ -75,6 +75,36 @@ const server = http.createServer(async (req, res) => {
       ok(res, { ok: true, started: true });
       return;
     }
+    if (req.method === "POST" && u.pathname === "/api/preview") {
+      const body = await parseBody(req).catch(() => ({}));
+      if (PASS && body.password !== PASS) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "비밀번호가 다릅니다" }));
+        return;
+      }
+      await saveSettings(body);
+      req.setTimeout(200000);
+      res.setTimeout(200000);
+      const messages = await new Promise((resolve, reject) => {
+        const child = spawn("/usr/local/bin/node", ["/app/run.mjs"], {
+          env: Object.assign({}, process.env, { PREVIEW: "1", DRY_RUN: "1" }),
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+        let out = "", err = "";
+        child.stdout.on("data", (d) => { out += d; });
+        child.stderr.on("data", (d) => { err += d; });
+        const t = setTimeout(() => { child.kill(); reject(new Error("미리보기 시간 초과")); }, 180000);
+        child.on("close", () => {
+          clearTimeout(t);
+          const idx = out.lastIndexOf("PREVIEW_JSON:");
+          if (idx < 0) return reject(new Error((err || out).slice(-400) || "미리보기 실패"));
+          try { resolve(JSON.parse(out.slice(idx + 13).split("\n")[0])); }
+          catch (e) { reject(e); }
+        });
+      });
+      ok(res, { ok: true, messages: messages });
+      return;
+    }
     res.writeHead(404);
     res.end("not found");
   } catch (e) {
