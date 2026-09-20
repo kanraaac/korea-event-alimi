@@ -1,4 +1,4 @@
-// 예스24 일간 베스트. 분류는 예스24 국내도서 카테고리 번호.
+// 예스24 국내도서 일간 베스트. 분류는 상품 장르로 필터한다.
 import { getText } from "./http.mjs";
 
 export const BOOK_CATS = [
@@ -21,8 +21,17 @@ export const BOOK_CATS = [
   { id: "001006", label: "건강취미" },
 ];
 
-function listUrl(cat) {
-  return "https://www.yes24.com/Product/Category/DayBestSeller?CategoryNumber=" + encodeURIComponent(cat);
+function norm(s) {
+  return String(s || "").replace(/\s+/g, "");
+}
+
+export function bookMatches(genre, cat) {
+  const g = norm(genre);
+  if (!g || g === "-") return false;
+  const full = norm(cat.label);
+  if (full && g.indexOf(full) >= 0) return true;
+  const keys = cat.label.split(/[\/·]/).map((x) => norm(x)).filter((x) => x.length >= 2);
+  return keys.some((k) => g.indexOf(k) >= 0);
 }
 
 async function listGoods(url, limit, ranked) {
@@ -40,7 +49,7 @@ async function listGoods(url, limit, ranked) {
     items.push({ rank: rk ? +rk : n, id: id, title: title });
     if (items.length >= limit) break;
   }
-  return items.sort((a, b) => a.rank - b.rank);
+  return items;
 }
 
 async function enrich(it) {
@@ -64,9 +73,22 @@ function tpAuthor(tp) {
   return tp[1] || "-";
 }
 
-export async function collectBooks(limit = 20, cat = "001") {
-  const n = Math.min(20, Math.max(1, Math.trunc(+limit) || 20));
-  const items = await listGoods(listUrl(cat || "001"), n, true);
+export async function collectBooks(pool = 60) {
+  const want = Math.min(80, Math.max(20, Math.trunc(+pool) || 60));
+  const seen = new Set();
+  const items = [];
+  for (let page = 1; page <= 4 && items.length < want; page++) {
+    const url = "https://www.yes24.com/Product/Category/DayBestSeller?CategoryNumber=001&pageNumber=" + page + "&pageSize=24";
+    const chunk = await listGoods(url, 24, true);
+    if (!chunk.length) break;
+    for (const it of chunk) {
+      if (seen.has(it.id)) continue;
+      seen.add(it.id);
+      items.push(it);
+      if (items.length >= want) break;
+    }
+  }
+  items.sort((a, b) => a.rank - b.rank);
   for (const it of items) await enrich(it);
   return items;
 }
