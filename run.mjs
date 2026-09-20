@@ -176,7 +176,7 @@ if (wantPop || wantClassic) await safe("concerts", async () => {
     return "pop";
   }
   async function sendKind(label, kind, days) {
-    const groups = Object.fromEntries(enabled.map((k) => [k, []]));
+    const bags = Object.fromEntries(enabled.map((k) => [k, []]));
     let skip = 0;
     for (const r of raw) {
       if (kindOf(r) !== kind) continue;
@@ -189,11 +189,18 @@ if (wantPop || wantClassic) await safe("concerts", async () => {
         skip++;
         continue;
       }
-      const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
-      groups[k].push(itemLine(
-        esc(brackets(r.name)) + " (" + esc(k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
-        kopisUrl(r.id), isToday(r.from, r.to)
-      ));
+      bags[k].push(r);
+    }
+    const groups = {};
+    for (const k of enabled) {
+      bags[k].sort((a, b) => byTime(num8(a.from), num8(b.from), isToday(a.from, a.to), isToday(b.from, b.to)));
+      groups[k] = bags[k].map((r) => {
+        const per = r.from === r.to ? r.from : r.from + "~" + knex(r.to);
+        return itemLine(
+          esc(brackets(r.name)) + " (" + esc(k) + ") | 공연 " + esc(per) + " | " + esc((r.place || "").replace(/\s*\(.*$/, "").slice(0, 14)),
+          kopisUrl(r.id), isToday(r.from, r.to)
+        );
+      });
     }
     console.log(kind + " skipped:", skip);
     await sendGrouped(label + " | " + dateLabel, groups);
@@ -231,6 +238,12 @@ if (cfg.topics.books) await safe("books", async () => {
   const parts = chunkLines(gapEvery(best.map(bl)));
   for (let i = 0; i < parts.length; i++) {
     await say(heading("도서 베스트셀러 | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
+  }
+});
+
+console.log("sent messages:", sent.length);
+ "")) + "\n\n" + parts[i].join("\n"));
+    }
   }
 });
 
