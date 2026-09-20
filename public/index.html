@@ -93,16 +93,20 @@ async function load() {
 function collect() {
   const topics = {};
   const days = {};
+  const counts = {};
   for (const t of TOPICS) {
     topics[t.k] = document.getElementById("t_"+t.k).checked;
     if (t.days) days[t.k] = Number(document.getElementById("d_"+t.k).value);
+    if (t.count) counts[t.k] = Number(document.getElementById("c_"+t.k).value);
   }
+  const bookCats = {};
+  document.querySelectorAll("[id^=bc_]").forEach((el) => { bookCats[el.id.slice(3)] = el.checked; });
   const regions = {};
   document.querySelectorAll("[id^=r_]").forEach((el) => { regions[el.id.slice(2)] = el.checked; });
   return {
     hour: Number(document.getElementById("hour").value),
     minute: Number(document.getElementById("minute").value),
-    topics, days, regions,
+    topics, days, counts, bookCats, regions,
     password: document.getElementById("password").value,
   };
 }
@@ -120,6 +124,15 @@ document.getElementById("save").onclick = async () => {
 };
 document.getElementById("run").onclick = async () => {
   msg("발송을 시작했다. 채널을 확인하면 된다.");
+  const r = await fetch("/api/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
+  const j = await r.json();
+  if (!r.ok) return msg(j.error || "실패", true);
+};
+load();
+</script>
+</body>
+</html>
+�작했다. 채널을 확인하면 된다.");
   const r = await fetch("/api/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
