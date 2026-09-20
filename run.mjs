@@ -97,7 +97,7 @@ async function sendPacked(title, blocks) {
   }
   if (buf.length) chunks.push(buf);
   for (let i = 0; i < chunks.length; i++) {
-    const h = heading(title + (chunks.length > 1 ? " | " + (i + 1) : ""));
+    const h = heading(title + (chunks.length > 1 ? " # " + (i + 1) + "/" + chunks.length : ""));
     await say(h + "\n\n" + chunks[i].join("\n"));
   }
 }
@@ -194,7 +194,10 @@ if (wantPop || wantClassic) await safe("concerts", async () => {
   const popDays = cfg.days.pop || cfg.days.concerts || 15;
   const classicDays = cfg.days.classic || cfg.days.concerts || 15;
   const maxDays = Math.max(wantPop ? popDays : 0, wantClassic ? classicDays : 0);
-  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(maxDays));
+  const cates = [];
+  if (wantPop) cates.push("CCCD");
+  if (wantClassic) cates.push("CCCA");
+  const raw = await collectConcerts(KOPIS, ymd8(0), ymd8(maxDays), cates);
   console.log("concerts raw:", raw.length);
   function kindOf(r) {
     if (r.cate === "CCCA" || /클래식|오페라|교향|실내악|합창/.test(r.genre || "")) return "classic";
@@ -281,8 +284,5 @@ if (cfg.topics.stays) await safe("stays", async () => {
 });
 
 if (PREVIEW) console.log("PREVIEW_JSON:" + JSON.stringify(drafts));
-console.log("sent messages:", sent.length);
-await progressDone();
-EW_JSON:" + JSON.stringify(drafts));
 console.log("sent messages:", sent.length);
 await progressDone();
