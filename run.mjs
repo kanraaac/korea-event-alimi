@@ -29,6 +29,10 @@ const dateLabel = kstLabel(0);
 const sent = [];
 const drafts = [];
 const enabled = REGIONS.filter((r) => cfg.regions[r]);
+const wantPop = cfg.topics.pop !== false && (cfg.topics.pop || cfg.topics.concerts);
+const wantClassic = cfg.topics.classic !== false && (cfg.topics.classic || cfg.topics.concerts);
+async function progress() {}
+async function progressDone() {}
 
 async function say(text) {
   if (PREVIEW) {
