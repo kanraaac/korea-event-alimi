@@ -147,22 +147,7 @@ document.getElementById("run").onclick = async function () {
   const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
-  msg("0 / 0  시작");
-  var n = 0;
-  var timer = setInterval(async function () {
-    n++;
-    try {
-      var p = await fetch("/api/progress");
-      var st = await p.json();
-      if (st.total) msg(st.step + " / " + st.total + "  " + (st.label || ""));
-      else if (st.label) msg(st.label);
-      if (st.done) {
-        clearInterval(timer);
-        msg((st.total || st.step) + " / " + (st.total || st.step) + "  끝  (" + (st.sent || 0) + "통)");
-      }
-    } catch (e) {}
-    if (n > 180) { clearInterval(timer); msg("시간이 너무 길다. 채널을 확인하면 된다.", true); }
-  }, 1500);
+  msg("발송을 시작했다. 채널을 확인하면 된다.");
 };
 load();
 </script>
