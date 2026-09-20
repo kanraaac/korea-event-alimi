@@ -8,7 +8,13 @@ services:
       TZ: Asia/Seoul
       SETTINGS_PATH: /data/settings.json
     ports:
-      - "8080:8080"
+      - "18088:8080"
     volumes:
       - ./logs:/var/log
       - ./data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.korea-event-alimi.rule=Host(`alimi.srv1821288.hstgr.cloud`)
+      - traefik.http.routers.korea-event-alimi.entrypoints=websecure
+      - traefik.http.routers.korea-event-alimi.tls.certresolver=letsencrypt
+      - traefik.http.services.korea-event-alimi.loadbalancer.server.url=http://127.0.0.1:18088
