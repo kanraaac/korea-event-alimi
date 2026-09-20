@@ -258,7 +258,7 @@ if (cfg.topics.books) await safe("books", async () => {
   const onlyAll = !picked.length && !!(cfg.bookCats && cfg.bookCats["001"]);
   console.log("books filter:", picked.map((c) => c.label).join(",") || (onlyAll ? "종합" : "(none)"));
   if (!picked.length && !onlyAll) return;
-  const pool = await collectBooks(Math.max(40, n * 4));
+  const pool = await collectBooks(Math.max(80, n * 3));
   let best = onlyAll ? pool : pool.filter((it) => picked.some((c) => bookMatches(it.category, c)));
   best = best.slice(0, n).map((it, i) => Object.assign({}, it, { rank: i + 1 }));
   console.log("books out:", best.length, best.map((x) => x.category).join(","));
