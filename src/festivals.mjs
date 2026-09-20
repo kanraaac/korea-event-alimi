@@ -44,10 +44,10 @@ export function periodOf(it) {
   if (it.start && it.end) return `${it.start}~${String(it.end).replace(/^\d{4}\./, "")}`;
   return it.start || "";
 }
-export async function collectFestivals(y, m, d) {
+export async function collectFestivals(y, m, d, days = 30) {
   const base = Date.UTC(y, m - 1, d);
   const uniq = new Map();
-  for (let o = 0; o <= 30; o++) {
+  for (let o = 0; o <= days; o++) {
     const dt = new Date(base + o * 86400000);
     const yy = dt.getUTCFullYear(), mm = dt.getUTCMonth() + 1, dd = dt.getUTCDate();
     let pg = 0;
