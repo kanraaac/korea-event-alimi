@@ -66,6 +66,15 @@ const server = http.createServer(async (req, res) => {
       ok(res, { ok: true, settings: s });
       return;
     }
+    if (req.method === "GET" && u.pathname === "/api/progress") {
+      try {
+        const raw = await readFile(STATUS, "utf8");
+        ok(res, JSON.parse(raw));
+      } catch (e) {
+        ok(res, { running: false, done: false, step: 0, total: 0, label: "" });
+      }
+      return;
+    }
     if (req.method === "POST" && u.pathname === "/api/run") {
       const body = await parseBody(req).catch(() => ({}));
       if (PASS && body.password !== PASS) {
@@ -73,7 +82,15 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: "비밀번호가 다릅니다" }));
         return;
       }
-      const child = spawn("/usr/local/bin/node", ["/app/run.mjs"], { detached: true, stdio: "ignore" });
+      try {
+        await writeFile(STATUS, JSON.stringify({ running: true, done: false, step: 0, total: 0, label: "시작", sent: 0, at: Date.now() }));
+      } catch (e) { /* ignore */ }
+      let stdio = "ignore";
+      try {
+        const log = openSync("/var/log/digest.log", "a");
+        stdio = ["ignore", log, log];
+      } catch (e) { /* no log file */ }
+      const child = spawn("/usr/local/bin/node", ["/app/run.mjs"], { detached: true, stdio: stdio });
       child.unref();
       ok(res, { ok: true, started: true });
       return;
