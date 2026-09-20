@@ -8,34 +8,34 @@ function dtStr(off) {
 export function naverMovie(q) {
   return "https://search.naver.com/search.naver?query=" + encodeURIComponent("영화 " + q);
 }
-export async function collectMovies(key) {
+export async function collectMovies(key, limit = 10) {
+  const cap = Math.min(20, Math.max(1, Math.trunc(+limit) || 10));
   let list = [], dt = "";
   for (let back = 1; back <= 3; back++) {
     const t = dtStr(-back);
     try {
       const j = await getJson(
-        `https://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(key)}&targetDt=${t}`
+        "https://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=" + encodeURIComponent(key) + "&targetDt=" + t
       );
-      const cap = Math.min(10, Math.max(1, Math.trunc(+limit) || 10));
-      const l = (j.boxOfficeResult?.dailyBoxOfficeList || []).slice(0, cap);
+      const l = (j.boxOfficeResult && j.boxOfficeResult.dailyBoxOfficeList) || [];
       if (l.length) {
-        list = l;
+        list = l.slice(0, cap);
         dt = t;
         break;
       }
-    } catch { /* next day back */ }
+    } catch (e) { /* next day back */ }
   }
   const out = [];
   for (const m of list) {
     let genre = "-";
     try {
       const ij = await getJson(
-        `https://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json?key=${encodeURIComponent(key)}&movieCd=${m.movieCd}`
+        "https://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json?key=" + encodeURIComponent(key) + "&movieCd=" + m.movieCd
       );
-      const gs = ij.movieInfoResult?.movieInfo?.genres || [];
+      const gs = (ij.movieInfoResult && ij.movieInfoResult.movieInfo && ij.movieInfoResult.movieInfo.genres) || [];
       if (gs.length) genre = gs.map((g) => g.genreNm).join("/");
-    } catch { /* keep "-" */ }
-    out.push({ rank: m.rank, name: m.movieNm, open: m.openDt, audi: m.audiCnt, genre });
+    } catch (e) { /* keep "-" */ }
+    out.push({ rank: m.rank, name: m.movieNm, open: m.openDt, audi: m.audiCnt, genre: genre });
   }
-  return { dt, items: out };
+  return { dt: dt, items: out };
 }
