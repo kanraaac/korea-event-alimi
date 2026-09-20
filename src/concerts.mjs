@@ -29,7 +29,7 @@ export async function collectConcerts(key, stdate, eddate) {
         if (!id || out.has(id)) continue;
         out.set(id, {
           id: id, name: tag(b, "prfnm"), from: tag(b, "prfpdfrom"), to: tag(b, "prfpdto"),
-          place: tag(b, "fcltynm"), area: tag(b, "area"), genre: tag(b, "genrenm"),
+          place: tag(b, "fcltynm"), area: tag(b, "area"), genre: tag(b, "genrenm"), cate: shcate,
         });
       }
       if (blocks.length < 100 || ++cpage > 50) break;
