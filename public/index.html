@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>공연알리미 설정</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a222c; --line:#2c3a48; --text:#e8eef4; --muted:#8aa0b5; --accent:#3d8bfd; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 18px 80px; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p.sub { color: var(--muted); margin: 0 0 24px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 8px; margin-bottom: 16px; }
+    h2 { font-size: 15px; margin: 0 0 12px; }
+    label.row { display:flex; align-items:flex-start; gap:10px; margin: 0 0 12px; font-size: 14px; }
+    label.row span.hint { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+    input[type=number], input[type=password], input[type=time] {
+      background:#0f1419; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px;
+    }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; }
+    button { border:0; border-radius:10px; padding:11px 16px; font-size:14px; cursor:pointer; }
+    button.primary { background: var(--accent); color:#fff; }
+    button.ghost { background: transparent; color:var(--text); border:1px solid var(--line); }
+    #msg { min-height: 22px; color:#7ddea0; font-size:13px; margin-top:10px; }
+    #msg.err { color:#ff8a8a; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>대한민국 공연알리미</h1>
+  <p class="sub">Hostinger에서 이 페이지를 열고 발송 시각·분야·기간·권역을 저장한다.</p>
+
+  <section>
+    <h2>발송 시각 (한국시간)</h2>
+    <label class="row">매일 <input id="hour" type="number" min="0" max="23" style="width:72px"> 시
+      <input id="minute" type="number" min="0" max="59" style="width:72px"> 분</label>
+  </section>
+
+  <section>
+    <h2>보낼 분야</h2>
+    <div class="grid" id="topics"></div>
+  </section>
+
+  <section>
+    <h2>오늘 기준 며칠까지</h2>
+    <div class="grid" id="days"></div>
+  </section>
+
+  <section>
+    <h2>권역</h2>
+    <div id="regions"></div>
+  </section>
+
+  <section>
+    <h2>저장</h2>
+    <label class="row" id="passRow" style="display:none">비밀번호 <input id="password" type="password"></label>
+    <div class="actions">
+      <button class="primary" id="save">저장</button>
+      <button class="ghost" id="run">지금 한 번 보내기</button>
+    </div>
+    <div id="msg"></div>
+  </section>
+</main>
+<script>
+const TOPIC_LABEL = {
+  tickets: "예매 오픈",
+  festivals: "지역축제",
+  exhibitions: "전시·미술관·박물관",
+  concerts: "콘서트·음악",
+  movies: "영화",
+  books: "도서 베스트셀러",
+  stays: "공공예약 오픈 임박",
+};
+const DAY_LABEL = {
+  tickets: "예매 (일)",
+  festivals: "축제 (일)",
+  exhibitions: "전시 (일)",
+  concerts: "콘서트 (일)",
+};
+let state;
+function box(id, label, checked, hint) {
+  return `<label class="row"><input type="checkbox" id="${id}" ${checked ? "checked" : ""}><span>${label}${hint ? `<span class="hint">${hint}</span>` : ""}</span></label>`;
+}
+async function load() {
+  const r = await fetch("/api/settings");
+  const j = await r.json();
+  state = j.settings;
+  document.getElementById("hour").value = state.hour;
+  document.getElementById("minute").value = state.minute;
+  document.getElementById("topics").innerHTML = Object.keys(TOPIC_LABEL).map((k) => box("t_"+k, TOPIC_LABEL[k], state.topics[k])).join("");
+  document.getElementById("days").innerHTML = Object.keys(DAY_LABEL).map((k) =>
+    `<label class="row">${DAY_LABEL[k]} <input type="number" min="1" max="60" id="d_${k}" value="${state.days[k]}" style="width:80px"></label>`
+  ).join("");
+  document.getElementById("regions").innerHTML = j.regions.map((k) => box("r_"+k, k, state.regions[k], j.hints[k])).join("");
+  if (j.hasPass) document.getElementById("passRow").style.display = "flex";
+}
+function collect() {
+  const topics = {};
+  for (const k of Object.keys(TOPIC_LABEL)) topics[k] = document.getElementById("t_"+k).checked;
+  const days = {};
+  for (const k of Object.keys(DAY_LABEL)) days[k] = Number(document.getElementById("d_"+k).value);
+  const regions = {};
+  document.querySelectorAll("[id^=r_]").forEach((el) => { regions[el.id.slice(2)] = el.checked; });
+  return {
+    hour: Number(document.getElementById("hour").value),
+    minute: Number(document.getElementById("minute").value),
+    topics, days, regions,
+    password: document.getElementById("password").value,
+  };
+}
+function msg(t, err) {
+  const el = document.getElementById("msg");
+  el.className = err ? "err" : "";
+  el.textContent = t;
+}
+document.getElementById("save").onclick = async () => {
+  msg("저장 중...");
+  const r = await fetch("/api/settings", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(collect()) });
+  const j = await r.json();
+  if (!r.ok) return msg(j.error || "실패", true);
+  msg("저장했다. 다음 발송부터 적용된다.");
+};
+document.getElementById("run").onclick = async () => {
+  msg("발송을 시작했다. 채널을 확인하면 된다.");
+  const r = await fetch("/api/run", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
+  const j = await r.json();
+  if (!r.ok) return msg(j.error || "실패", true);
+};
+load();
+</script>
+</body>
+</html>
