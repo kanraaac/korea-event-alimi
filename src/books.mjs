@@ -73,11 +73,11 @@ function tpAuthor(tp) {
   return tp[1] || "-";
 }
 
-export async function collectBooks(pool = 60) {
-  const want = Math.min(120, Math.max(20, Math.trunc(+pool) || 60));
+export async function collectBooks(limit = 20, matchers) {
+  const n = Math.min(50, Math.max(1, Math.trunc(+limit) || 20));
   const seen = new Set();
   const items = [];
-  for (let page = 1; page <= 6 && items.length < want; page++) {
+  for (let page = 1; page <= 6 && items.length < 120; page++) {
     const url = "https://www.yes24.com/Product/Category/DayBestSeller?CategoryNumber=001&pageNumber=" + page + "&pageSize=24";
     const chunk = await listGoods(url, 24, true);
     if (!chunk.length) break;
@@ -85,12 +85,17 @@ export async function collectBooks(pool = 60) {
       if (seen.has(it.id)) continue;
       seen.add(it.id);
       items.push(it);
-      if (items.length >= want) break;
     }
   }
   items.sort((a, b) => a.rank - b.rank);
-  for (const it of items) await enrich(it);
-  return items;
+  const out = [];
+  for (const it of items) {
+    await enrich(it);
+    if (matchers && matchers.length && !matchers.some((c) => bookMatches(it.category, c))) continue;
+    out.push(Object.assign({}, it, { rank: out.length + 1 }));
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 export async function collectNewBooks() {
