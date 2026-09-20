@@ -1,6 +1,7 @@
 import http from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { openSync } from "node:fs";
 import { loadSettings, saveSettings, writeCrontab } from "./src/settings.mjs";
 import { REGIONS, REGION_HINT } from "./src/regions.mjs";
 import { BOOK_CATS } from "./src/books.mjs";
@@ -48,7 +49,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && u.pathname === "/api/settings") {
       const s = await loadSettings();
-      ok(res, { settings: s, regions: REGIONS, hints: REGION_HINT, hasPass: !!PASS, bookCats: BOOK_CATS });
+      let version = "dev";
+      try { version = (await readFile("/app/BUILD", "utf8")).trim(); } catch {}
+      ok(res, { settings: s, regions: REGIONS, hints: REGION_HINT, hasPass: !!PASS, bookCats: BOOK_CATS, version: version });
       return;
     }
     if (req.method === "POST" && u.pathname === "/api/settings") {
