@@ -34,7 +34,7 @@
 </head>
 <body>
 <main>
-  <h1>대한민국 공연알리미</h1>
+  <h1>대한민국 공연알리미 <span id="ver" class="ver"></span></h1>
   <p class="sub">Hostinger에서 이 페이지를 열고 발송 시각·분야·기간·권역을 저장한다.</p>
 
   <section>
@@ -101,6 +101,7 @@ async function load() {
   document.getElementById("topics").innerHTML = TOPICS.map(function (t) { return topicHtml(t, j); }).join("");
   document.getElementById("regions").innerHTML = j.regions.map(function (k) { return box("r_" + k, k, state.regions[k], j.hints[k]); }).join("");
   if (j.hasPass) document.getElementById("passRow").style.display = "flex";
+  if (j.version) document.getElementById("ver").textContent = "v" + j.version;
 }
 function collect() {
   const topics = {};
@@ -139,10 +140,21 @@ document.getElementById("save").onclick = async function () {
   msg("저장했다. 다음 발송부터 적용된다.");
 };
 document.getElementById("run").onclick = async function () {
-  msg("발송을 시작했다. 채널을 확인하면 된다.");
-  const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("password").value }) });
+  msg("설정 저장 후 발송을 시작한다. 몇 분 걸린다.");
+  const body = collect();
+  const s = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const sj = await s.json();
+  if (!s.ok) return msg(sj.error || "저장 실패", true);
+  const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json();
   if (!r.ok) return msg(j.error || "실패", true);
+  msg("발송을 시작했다. 채널을 확인하면 된다.");
+};
+load();
+</script>
+</body>
+</html>
+면 된다.");
 };
 load();
 </script>
