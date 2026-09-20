@@ -49,7 +49,9 @@ export function merge(raw) {
     if (raw.days.classic === undefined && raw.days.concerts) s.days.classic = s.days.concerts;
   }
   if (raw.regions && typeof raw.regions === "object") {
-    for (const k of REGIONS) s.regions[k] = !!raw.regions[k];
+    for (const k of REGIONS) {
+      if (raw.regions[k] !== undefined) s.regions[k] = !!raw.regions[k];
+    }
   }
   return s;
 }
