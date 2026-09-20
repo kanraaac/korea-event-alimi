@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { REGIONS } from "./regions.mjs";
 
-const PATH = process.env.SETTINGS_PATH || "/data/settings.json";
+const PATH = process.env.SETTINGS_PATH || join(process.cwd(), "data", "settings.json");
 
 export const DEFAULTS = {
   hour: 8,
@@ -20,6 +21,9 @@ export const DEFAULTS = {
     festivals: 30,
     exhibitions: 15,
     concerts: 15,
+    movies: 1,
+    books: 1,
+    stays: 7,
   },
   regions: Object.fromEntries(REGIONS.map((r) => [r, true])),
 };
@@ -35,7 +39,7 @@ export function merge(raw) {
   if (raw.days && typeof raw.days === "object") {
     for (const k of Object.keys(s.days)) {
       const n = Math.trunc(+raw.days[k]);
-      if (Number.isFinite(n)) s.days[k] = Math.min(60, Math.max(1, n));
+      if (Number.isFinite(n)) s.days[k] = Math.min(90, Math.max(1, n));
     }
   }
   if (raw.regions && typeof raw.regions === "object") {
