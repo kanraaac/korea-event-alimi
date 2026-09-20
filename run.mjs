@@ -206,6 +206,7 @@ if (cfg.topics.stays) await safe("stays", async () => {
   const alerts = ruleAlerts(today, cfg.days.stays);
   console.log("stays alerts:", alerts.length);
   if (alerts.length) {
+    alerts.sort((a, b) => byTime(a.openNum || 0, b.openNum || 0, a.openNum === today, b.openNum === today));
     await say(heading("공공예약 오픈 임박 | " + dateLabel) + "\n\n" + gapEvery(alerts.map((a) =>
       itemLine(esc(a.name) + " (전국) | " + esc(a.period), a.url, a.openNum === today)
     )).join("\n"));
