@@ -264,7 +264,7 @@ if (cfg.topics.books) await safe("books", async () => {
   const tag = onlyAll ? "종합" : picked.map((c) => c.label).join(", ");
   const parts = chunkLines(gapEvery(best.map(bl)));
   for (let i = 0; i < parts.length; i++) {
-    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) + " / " + parts.length : "")) + "\n\n" + parts[i].join("\n"));
+    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " # " + (i + 1) + "/" + parts.length : "")) + "\n\n" + parts[i].join("\n"));
   }
 });
 
@@ -281,5 +281,8 @@ if (cfg.topics.stays) await safe("stays", async () => {
 });
 
 if (PREVIEW) console.log("PREVIEW_JSON:" + JSON.stringify(drafts));
+console.log("sent messages:", sent.length);
+await progressDone();
+EW_JSON:" + JSON.stringify(drafts));
 console.log("sent messages:", sent.length);
 await progressDone();
