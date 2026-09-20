@@ -12,11 +12,12 @@ import { clusterOf, REGIONS } from "./src/regions.mjs";
 import { loadSettings } from "./src/settings.mjs";
 
 const DRY = process.env.DRY_RUN === "1";
+const PREVIEW = process.env.PREVIEW === "1";
 const TOK = process.env.TELEGRAM_BOT_TOKEN || "";
 const CHAT = process.env.TELEGRAM_CHAT_ID || "@korea_event_news";
 const KOPIS = process.env.KOPIS_KEY || "";
 const KOBIS = process.env.KOBIS_KEY || "";
-if (!DRY && !TOK) throw new Error("missing TELEGRAM_BOT_TOKEN");
+if (!DRY && !PREVIEW && !TOK) throw new Error("missing TELEGRAM_BOT_TOKEN");
 if (!KOPIS) throw new Error("missing KOPIS_KEY");
 if (!KOBIS) throw new Error("missing KOBIS_KEY");
 
@@ -24,9 +25,14 @@ const cfg = await loadSettings();
 const today = num8(ymd8(0));
 const dateLabel = kstLabel(0);
 const sent = [];
+const drafts = [];
 const enabled = REGIONS.filter((r) => cfg.regions[r]);
 
 async function say(text) {
+  if (PREVIEW) {
+    drafts.push(text);
+    return;
+  }
   const id = await sendMessage(TOK, CHAT, text, DRY);
   sent.push(id);
   await pace();
@@ -237,6 +243,7 @@ if (cfg.topics.stays) await safe("stays", async () => {
 if (cfg.topics.movies) await safe("movies", async () => {
   const res = await collectMovies(KOBIS, cfg.counts?.movies || 10);
   console.log("movies:", res.dt, res.items.length);
+  if (!res.items.length) return;
   const lines = gapEvery(res.items.map((x) => {
     const audi = Number(x.audi).toLocaleString("ko-KR");
     const open = x.open ? "개봉 " + String(x.open).replace(/-/g, ".") + " | " : "";
@@ -262,4 +269,5 @@ if (cfg.topics.books) await safe("books", async () => {
   }
 });
 
+if (PREVIEW) console.log("PREVIEW_JSON:" + JSON.stringify(drafts));
 console.log("sent messages:", sent.length);
