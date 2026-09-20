@@ -14,16 +14,16 @@ function mdOf(n) {
   return Math.floor(n / 100) % 100 + "/" + String(n % 100).padStart(2, "0");
 }
 // 고정 월간 리듬에서 7일 안에 오는 예약오픈만
-export function ruleAlerts(todayNum) {
+export function ruleAlerts(todayNum, days = 7) {
   const y = Math.floor(todayNum / 10000), m = Math.floor(todayNum / 100) % 100;
   const mm = String(m).padStart(2, "0");
-  const in7 = (ev) => ev >= todayNum && ev <= shiftNum(todayNum, 7);
+  const inWin = (ev) => ev >= todayNum && ev <= shiftNum(todayNum, days);
   const out = [];
   const nm = m === 12 ? 1 : m + 1;
   const ap = y * 10000 + m * 100 + 4;
-  if (in7(ap)) out.push({ name: "숲나들e " + nm + "월 주말추첨 접수", period: mm + "/04 09:00~" + mm + "/09 18:00", url: STAY_LINKS.forestApply, openNum: ap });
+  if (inWin(ap)) out.push({ name: "숲나들e " + nm + "월 주말추첨 접수", period: mm + "/04 09:00~" + mm + "/09 18:00", url: STAY_LINKS.forestApply, openNum: ap });
   const fc = y * 10000 + m * 100 + 15;
-  if (in7(fc)) out.push({ name: "숲나들e 미당첨·미결제 선착순 오픈", period: mm + "/15 09:00", url: STAY_LINKS.forestApply, openNum: fc });
+  if (inWin(fc)) out.push({ name: "숲나들e 미당첨·미결제 선착순 오픈", period: mm + "/15 09:00", url: STAY_LINKS.forestApply, openNum: fc });
   let ey = y, em = m;
   if (em % 2 === 1) {
     em += 1;
@@ -35,7 +35,7 @@ export function ruleAlerts(todayNum) {
     if (em > 12) { em -= 12; ey += 1; }
     target = ey * 10000 + em * 100 + 1;
   }
-  if (in7(target)) {
+  if (inWin(target)) {
     const tm = Math.floor(target / 100) % 100;
     let vm = tm + 2, vy = Math.floor(target / 10000);
     if (vm > 12) { vm -= 12; vy += 1; }
