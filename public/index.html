@@ -15,10 +15,12 @@
     h2 { font-size: 15px; margin: 0 0 12px; }
     label.row { display:flex; align-items:flex-start; gap:10px; margin: 0 0 12px; font-size: 14px; }
     label.row span.hint { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
-    input[type=number], input[type=password], input[type=time] {
+    input[type=number], input[type=password] {
       background:#0f1419; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px;
     }
-    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .topic { display:flex; align-items:center; gap:10px; margin: 0 0 12px; font-size: 14px; flex-wrap: wrap; }
+    .topic .name { flex: 1 1 180px; }
+    .topic .days { color: var(--muted); display:flex; align-items:center; gap:6px; white-space: nowrap; }
     .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; }
     button { border:0; border-radius:10px; padding:11px 16px; font-size:14px; cursor:pointer; }
     button.primary { background: var(--accent); color:#fff; }
@@ -39,13 +41,8 @@
   </section>
 
   <section>
-    <h2>보낼 분야</h2>
-    <div class="grid" id="topics"></div>
-  </section>
-
-  <section>
-    <h2>오늘 기준 며칠까지</h2>
-    <div class="grid" id="days"></div>
+    <h2>보낼 분야 · 오늘부터 며칠</h2>
+    <div id="topics"></div>
   </section>
 
   <section>
@@ -64,21 +61,15 @@
   </section>
 </main>
 <script>
-const TOPIC_LABEL = {
-  tickets: "예매 오픈",
-  festivals: "지역축제",
-  exhibitions: "전시·미술관·박물관",
-  concerts: "콘서트·음악",
-  movies: "영화",
-  books: "도서 베스트셀러",
-  stays: "공공예약 오픈 임박",
-};
-const DAY_LABEL = {
-  tickets: "예매 (일)",
-  festivals: "축제 (일)",
-  exhibitions: "전시 (일)",
-  concerts: "콘서트 (일)",
-};
+const TOPICS = [
+  { k: "tickets", label: "예매 오픈", days: true },
+  { k: "festivals", label: "지역축제", days: true },
+  { k: "exhibitions", label: "전시·미술관·박물관", days: true },
+  { k: "concerts", label: "콘서트·음악", days: true },
+  { k: "stays", label: "공공예약 오픈 임박", days: true },
+  { k: "movies", label: "영화 (전일 박스)", days: false },
+  { k: "books", label: "도서 베스트셀러", days: false },
+];
 let state;
 function box(id, label, checked, hint) {
   return `<label class="row"><input type="checkbox" id="${id}" ${checked ? "checked" : ""}><span>${label}${hint ? `<span class="hint">${hint}</span>` : ""}</span></label>`;
@@ -89,18 +80,22 @@ async function load() {
   state = j.settings;
   document.getElementById("hour").value = state.hour;
   document.getElementById("minute").value = state.minute;
-  document.getElementById("topics").innerHTML = Object.keys(TOPIC_LABEL).map((k) => box("t_"+k, TOPIC_LABEL[k], state.topics[k])).join("");
-  document.getElementById("days").innerHTML = Object.keys(DAY_LABEL).map((k) =>
-    `<label class="row">${DAY_LABEL[k]} <input type="number" min="1" max="60" id="d_${k}" value="${state.days[k]}" style="width:80px"></label>`
-  ).join("");
+  document.getElementById("topics").innerHTML = TOPICS.map((t) => {
+    const days = t.days
+      ? `<span class="days">오늘부터 <input type="number" min="1" max="90" id="d_${t.k}" value="${state.days[t.k] || 1}" style="width:72px"> 일</span>`
+      : `<span class="days">기간 없음</span>`;
+    return `<div class="topic"><input type="checkbox" id="t_${t.k}" ${state.topics[t.k] ? "checked" : ""}><span class="name">${t.label}</span>${days}</div>`;
+  }).join("");
   document.getElementById("regions").innerHTML = j.regions.map((k) => box("r_"+k, k, state.regions[k], j.hints[k])).join("");
   if (j.hasPass) document.getElementById("passRow").style.display = "flex";
 }
 function collect() {
   const topics = {};
-  for (const k of Object.keys(TOPIC_LABEL)) topics[k] = document.getElementById("t_"+k).checked;
   const days = {};
-  for (const k of Object.keys(DAY_LABEL)) days[k] = Number(document.getElementById("d_"+k).value);
+  for (const t of TOPICS) {
+    topics[t.k] = document.getElementById("t_"+t.k).checked;
+    if (t.days) days[t.k] = Number(document.getElementById("d_"+t.k).value);
+  }
   const regions = {};
   document.querySelectorAll("[id^=r_]").forEach((el) => { regions[el.id.slice(2)] = el.checked; });
   return {
