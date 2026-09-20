@@ -72,6 +72,10 @@ async function sendPacked(title, blocks) {
           buf = [];
           n = title.length + 4;
         }
+        if (buf.length) {
+          buf.push("");
+          n += 1;
+        }
         buf.push(sub);
         n += sub.length + 1;
         needHead = false;
@@ -183,6 +187,35 @@ if (cfg.topics.exhibitions) await safe("exhibitions", async () => {
   await sendGrouped("전시·미술관·박물관 | " + dateLabel, groups);
 });
 
+if (cfg.topics.movies) await safe("movies", async () => {
+  const res = await collectMovies(KOBIS, cfg.counts?.movies || 10);
+  console.log("movies:", res.dt, res.items.length);
+  if (!res.items.length) return;
+  const lines = gapEvery(res.items.map((x) => {
+    const audi = Number(x.audi).toLocaleString("ko-KR");
+    const open = x.open ? "개봉 " + String(x.open).replace(/-/g, ".") + " | " : "";
+    return x.rank + ". " + esc(x.name) + " (전국) | " + esc(x.genre) + " | " + open + "전일 " + audi + " " + link(naverMovie(x.name));
+  }));
+  await say(heading("영화 상영 | " + dateLabel) + "\n\n" + lines.join("\n"));
+});
+
+if (cfg.topics.books) await safe("books", async () => {
+  const n = cfg.counts?.books || 10;
+  const picked = BOOK_CATS.filter((c) => c.id !== "001" && cfg.bookCats && cfg.bookCats[c.id]);
+  const onlyAll = !picked.length && !!(cfg.bookCats && cfg.bookCats["001"]);
+  console.log("books filter:", picked.map((c) => c.label).join(",") || (onlyAll ? "종합" : "(none)"));
+  if (!picked.length && !onlyAll) return;
+  const best = await collectBooks(n, onlyAll ? null : picked);
+  console.log("books out:", best.length, best.map((x) => x.category).join(","));
+  if (!best.length) return;
+  const bl = (x) => x.rank + ". " + esc(x.title) + " | " + esc(x.author) + " | " + esc(x.category) + " | 평점 " + x.rating + " " + link(x.url);
+  const tag = onlyAll ? "종합" : picked.map((c) => c.label).join(", ");
+  const parts = chunkLines(gapEvery(best.map(bl)));
+  for (let i = 0; i < parts.length; i++) {
+    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
+  }
+});
+
 const wantPop = cfg.topics.pop !== false && (cfg.topics.pop || cfg.topics.concerts);
 const wantClassic = cfg.topics.classic !== false && (cfg.topics.classic || cfg.topics.concerts);
 if (wantPop || wantClassic) await safe("concerts", async () => {
@@ -237,37 +270,6 @@ if (cfg.topics.stays) await safe("stays", async () => {
     await say(heading("공공예약 오픈 임박 | " + dateLabel) + "\n\n" + gapEvery(alerts.map((a) =>
       itemLine(esc(a.name) + " (전국) | " + esc(a.period), a.url, a.openNum === today)
     )).join("\n"));
-  }
-});
-
-if (cfg.topics.movies) await safe("movies", async () => {
-  const res = await collectMovies(KOBIS, cfg.counts?.movies || 10);
-  console.log("movies:", res.dt, res.items.length);
-  if (!res.items.length) return;
-  const lines = gapEvery(res.items.map((x) => {
-    const audi = Number(x.audi).toLocaleString("ko-KR");
-    const open = x.open ? "개봉 " + String(x.open).replace(/-/g, ".") + " | " : "";
-    return x.rank + ". " + esc(x.name) + " (전국) | " + esc(x.genre) + " | " + open + "전일 " + audi + " " + link(naverMovie(x.name));
-  }));
-  await say(heading("영화 상영 | " + dateLabel) + "\n\n" + lines.join("\n"));
-});
-
-if (cfg.topics.books) await safe("books", async () => {
-  const n = cfg.counts?.books || 10;
-  const picked = BOOK_CATS.filter((c) => c.id !== "001" && cfg.bookCats && cfg.bookCats[c.id]);
-  const onlyAll = !picked.length && !!(cfg.bookCats && cfg.bookCats["001"]);
-  console.log("books filter:", picked.map((c) => c.label).join(",") || (onlyAll ? "종합" : "(none)"));
-  if (!picked.length && !onlyAll) return;
-  const pool = await collectBooks(Math.max(80, n * 3));
-  let best = onlyAll ? pool : pool.filter((it) => picked.some((c) => bookMatches(it.category, c)));
-  best = best.slice(0, n).map((it, i) => Object.assign({}, it, { rank: i + 1 }));
-  console.log("books out:", best.length, best.map((x) => x.category).join(","));
-  if (!best.length) return;
-  const bl = (x) => x.rank + ". " + esc(x.title) + " | " + esc(x.author) + " | " + esc(x.category) + " | 평점 " + x.rating + " " + link(x.url);
-  const tag = onlyAll ? "종합" : picked.map((c) => c.label).join(", ");
-  const parts = chunkLines(gapEvery(best.map(bl)));
-  for (let i = 0; i < parts.length; i++) {
-    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
   }
 });
 
