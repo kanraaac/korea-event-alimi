@@ -254,18 +254,20 @@ if (cfg.topics.movies) await safe("movies", async () => {
 
 if (cfg.topics.books) await safe("books", async () => {
   const n = cfg.counts?.books || 10;
-  const cats = BOOK_CATS.filter((c) => !!(cfg.bookCats && cfg.bookCats[c.id]));
-  console.log("books cats:", cats.map((c) => c.label).join(",") || "(none)");
-  if (!cats.length) return;
+  const picked = BOOK_CATS.filter((c) => c.id !== "001" && cfg.bookCats && cfg.bookCats[c.id]);
+  const onlyAll = !picked.length && !!(cfg.bookCats && cfg.bookCats["001"]);
+  console.log("books filter:", picked.map((c) => c.label).join(",") || (onlyAll ? "종합" : "(none)"));
+  if (!picked.length && !onlyAll) return;
+  const pool = await collectBooks(Math.max(40, n * 4));
+  let best = onlyAll ? pool : pool.filter((it) => picked.some((c) => bookMatches(it.category, c)));
+  best = best.slice(0, n).map((it, i) => Object.assign({}, it, { rank: i + 1 }));
+  console.log("books out:", best.length, best.map((x) => x.category).join(","));
+  if (!best.length) return;
   const bl = (x) => x.rank + ". " + esc(x.title) + " | " + esc(x.author) + " | " + esc(x.category) + " | 평점 " + x.rating + " " + link(x.url);
-  for (const cat of cats) {
-    const best = await collectBooks(n, cat.id);
-    console.log("books", cat.id, cat.label, best.length);
-    if (!best.length) continue;
-    const parts = chunkLines(gapEvery(best.map(bl)));
-    for (let i = 0; i < parts.length; i++) {
-      await say(heading("도서 베스트셀러 | " + cat.label + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
-    }
+  const tag = onlyAll ? "종합" : picked.map((c) => c.label).join(", ");
+  const parts = chunkLines(gapEvery(best.map(bl)));
+  for (let i = 0; i < parts.length; i++) {
+    await say(heading("도서 베스트셀러 | " + tag + " | " + dateLabel + (parts.length > 1 ? " | " + (i + 1) : "")) + "\n\n" + parts[i].join("\n"));
   }
 });
 
