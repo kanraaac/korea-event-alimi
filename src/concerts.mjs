@@ -15,13 +15,19 @@ export function cityOf(hay) {
   return ((hay.match(/\[([가-힣]+)\]/) || [])[1]) || ((hay.match(CITY_RE) || [])[0]) || "";
 }
 export const kopisUrl = (id) => "https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do?mt20Id=" + id;
-export async function collectConcerts(key, stdate, eddate) {
+export async function collectConcerts(key, stdate, eddate, kinds) {
   const out = new Map();
-  for (const shcate of ["CCCD", "CCCA"]) {
+  const cates = (kinds && kinds.length) ? kinds : ["CCCD", "CCCA"];
+  for (const shcate of cates) {
     let cpage = 1;
-    while (true) {
+    while (cpage <= 12) {
       const u = "http://www.kopis.or.kr/openApi/restful/pblprfr?service=" + encodeURIComponent(key) + "&stdate=" + stdate + "&eddate=" + eddate + "&cpage=" + cpage + "&rows=100&shcate=" + shcate;
-      const t = await getText(u);
+      let t = "";
+      try {
+        t = await getText(u);
+      } catch (e) {
+        break;
+      }
       const blocks = t.split("<db>").slice(1);
       if (!blocks.length) break;
       for (const b of blocks) {
@@ -32,7 +38,8 @@ export async function collectConcerts(key, stdate, eddate) {
           place: tag(b, "fcltynm"), area: tag(b, "area"), genre: tag(b, "genrenm"), cate: shcate,
         });
       }
-      if (blocks.length < 100 || ++cpage > 50) break;
+      if (blocks.length < 100) break;
+      cpage++;
     }
   }
   return [...out.values()];
