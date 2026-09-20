@@ -189,7 +189,7 @@ if (cfg.topics.concerts) await safe("concerts", async () => {
 });
 
 if (cfg.topics.stays) await safe("stays", async () => {
-  const alerts = ruleAlerts(today);
+  const alerts = ruleAlerts(today, cfg.days.stays);
   console.log("stays alerts:", alerts.length);
   if (alerts.length) {
     await say(heading("공공예약 오픈 임박 | " + dateLabel) + "\n\n" + gapEvery(alerts.map((a) =>
