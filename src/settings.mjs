@@ -70,6 +70,9 @@ export function merge(raw) {
     for (const k of REGIONS) {
       if (raw.regions[k] !== undefined) s.regions[k] = !!raw.regions[k];
     }
+    if (raw.regions["서울"] === undefined && raw.regions["수도권"] !== undefined) {
+      s.regions["서울"] = !!raw.regions["수도권"];
+    }
   }
   return s;
 }
